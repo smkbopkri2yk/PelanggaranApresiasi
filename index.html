@@ -1,0 +1,3938 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>App Poin Siswa - V3 (Firebase)</title>
+  
+  <!-- Frameworks & Libraries -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
+  <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
+  <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+  
+  <!-- Fonts & Icons -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css" rel="stylesheet"/>
+
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-storage-compat.js"></script>
+
+  <style>
+    /* ====== Claymorphism UI & Base Styles ====== */
+    :root { 
+      --brand-primary: #2563eb; /* blue-600 */
+      --danger: #dc2626; /* red-600 */
+      --success: #16a34a; /* green-600 */
+      --warning: #f59e0b; /* amber-500 */
+      
+      /* Claymorphism Variables */
+      --clay-bg: #eef2ff;
+      --clay-shadow-dark: rgba(195, 200, 215, 0.75);
+      --clay-shadow-light: rgba(255, 255, 255, 0.8);
+      --clay-border-radius-lg: 24px;
+      --clay-border-radius-md: 16px;
+      --clay-shadow: 8px 8px 16px var(--clay-shadow-dark), -8px -8px 16px var(--clay-shadow-light);
+      --clay-shadow-pressed: inset 6px 6px 12px var(--clay-shadow-dark), inset -6px -6px 12px var(--clay-shadow-light);
+      --clay-transition: all 0.2s ease-out;
+    }
+    html { scroll-behavior: smooth; }
+    body { 
+      font-family: 'Inter', sans-serif; 
+      background-color: var(--clay-bg);
+      color: #374151;
+    }
+
+    /* Claymorphism Utility Classes */
+    .clay {
+      background: var(--clay-bg);
+      border-radius: var(--clay-border-radius-lg);
+      box-shadow: var(--clay-shadow);
+      transition: var(--clay-transition);
+    }
+    .clay-sm {
+      border-radius: var(--clay-border-radius-md);
+    }
+    .clay-pressed {
+      box-shadow: var(--clay-shadow-pressed) !important;
+    }
+
+    /* Applying Claymorphism to elements */
+    .panel {
+      background: var(--clay-bg);
+      border-radius: var(--clay-border-radius-lg);
+      box-shadow: var(--clay-shadow);
+      padding: 20px;
+    }
+    .clay-btn {
+      background: var(--clay-bg);
+      border-radius: var(--clay-border-radius-md);
+      box-shadow: var(--clay-shadow);
+      transition: var(--clay-transition);
+      padding: 10px 18px;
+      font-weight: 600;
+      color: #4b5563;
+    }
+    .clay-btn:hover {
+      transform: translateY(-1px);
+    }
+    .clay-btn:active {
+      transform: translateY(0);
+      box-shadow: var(--clay-shadow-pressed);
+    }
+    .clay-btn-primary {
+      color: var(--brand-primary);
+    }
+    .clay-input {
+      background: var(--clay-bg);
+      border-radius: var(--clay-border-radius-md);
+      box-shadow: var(--clay-shadow-pressed);
+      border: none;
+      padding: 12px 16px;
+      width: 100%;
+      transition: var(--clay-transition);
+    }
+    .clay-input:focus {
+      outline: none;
+      box-shadow: var(--clay-shadow-pressed), 0 0 0 2px var(--brand-primary);
+    }
+
+    /* ====== App Layout ====== */
+    .app { display: none; min-height: 100vh; }
+    .app.show { display: grid; grid-template-columns: 260px 1fr; transition: grid-template-columns .25s ease; }
+    .app.collapsed { grid-template-columns: 80px 1fr; }
+    .app.collapsed .sidebar { width: 80px; }
+    .app.collapsed .sidebar .brand span, .app.collapsed .nav .label, .app.collapsed .logout .label { display: none; }
+    .app.collapsed .sidebar .brand, .app.collapsed .nav button, .app.collapsed .logout { justify-content: center; }
+
+    /* ====== Sidebar ====== */
+    .sidebar {
+      background: var(--clay-bg);
+      padding: 18px;
+      position: relative;
+      width: 260px;
+      transition: width .25s ease;
+      display: flex;
+      flex-direction: column;
+      border-right: 1px solid rgba(0,0,0,0.02);
+    }
+    .brand { display: flex; align-items: center; gap: 12px; margin-bottom: 22px; padding: 0 6px; }
+    .brand i { font-size: 32px; color: var(--brand-primary); }
+    .brand span { font-weight: 700; font-size: 18px; color: #1f2937; }
+    .nav { display: flex; flex-direction: column; gap: 8px; flex-grow: 1; }
+    .nav button {
+      display: flex; align-items: center; gap: 12px; width: 100%; text-align: left;
+      padding: 11px 14px; border: none; background: transparent;
+      border-radius: var(--clay-border-radius-md); cursor: pointer;
+      font-weight: 500; font-size: 15px; color: #4b5563;
+      transition: var(--clay-transition);
+    }
+    .nav button i { font-size: 24px; }
+    .nav button:hover { background: rgba(255,255,255,0.5); }
+    .nav button.active {
+      background: var(--clay-bg);
+      box-shadow: var(--clay-shadow-pressed);
+      color: var(--brand-primary);
+      font-weight: 600;
+    }
+    .logout {
+      margin-top: 1rem;
+    }
+
+    /* ====== Content Area ====== */
+    .content { padding: 24px; background: var(--clay-bg); overflow-y: auto; height: 100vh; }
+    .topbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; flex-wrap: wrap; gap: 1rem; }
+    .left-controls { display: flex; align-items: center; gap: 12px; }
+    .icon-btn {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 44px; height: 44px; font-size: 24px;
+    }
+    .topbar .welcome { color: #1f2937; font-weight: 600; font-size: 1.1rem; }
+    .view-content { animation: fadeInUp 0.4s ease-out; }
+    @keyframes fadeInUp { from { transform: translateY(10px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+    /* Notif Bell */
+    .notification-bell {
+        position: relative;
+    }
+    .notification-badge {
+        position: absolute;
+        top: 2px;
+        right: 2px;
+        width: 18px;
+        height: 18px;
+        background-color: var(--danger);
+        color: white;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 10px;
+        font-weight: bold;
+        border: 2px solid var(--clay-bg);
+    }
+
+
+    /* ====== General Components & Utilities ====== */
+    .modal-content { animation: slide-down 0.3s ease-out; }
+    @keyframes slide-down { from { transform: translateY(-20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    .spinner { border: 2px solid rgba(0,0,0,0.1); border-top: 2px solid var(--brand-primary); border-radius: 50%; width: 16px; height: 16px; animation: spin 1s linear infinite; }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar { width: 8px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #d1d9e6; border-radius: 10px; }
+    ::-webkit-scrollbar-thumb:hover { background: #b8c1d1; }
+
+    /* Print Styles */
+    @media print {
+      .no-print { display: none !important; }
+      .app.show { display: block; grid-template-columns: 1fr; }
+      .sidebar, .topbar, #actionBar { display: none !important; }
+      .content { padding: 0; background: #fff; }
+      .panel { box-shadow: none; border: 1px solid #ccc; }
+      #printArea { display: block !important; }
+      body { background: #fff; }
+    }
+    
+    /* Mobile Layout */
+    @media (max-width: 900px) {
+      .app.show { grid-template-columns: 1fr; }
+      .sidebar { position: sticky; top: 0; z-index: 10; width: 100% !important; height: auto; }
+      .app:not(.collapsed) .nav { flex-direction: row; overflow-x: auto; }
+      .app:not(.collapsed) .nav button { flex-shrink: 0; }
+      .app:not(.collapsed) .logout { display: none; }
+      .content { height: auto; }
+    }
+  </style>
+</head>
+<body>
+  <!-- Login Page -->
+  <section id="loginPage" class="flex items-center justify-center min-h-screen p-4">
+    <div class="w-full max-w-md p-8 clay">
+      <div class="flex items-center gap-4 mb-6">
+        <div class="h-12 w-12 grid place-items-center rounded-xl bg-blue-600 text-white">
+          <i class="bx bxs-flag-alt text-2xl"></i>
+        </div>
+        <div>
+          <h1 class="text-2xl font-bold text-slate-900">Poin Pelanggaran Siswa</h1>
+          <p class="text-sm text-slate-500">Silakan masuk untuk melanjutkan</p>
+        </div>
+      </div>
+      <div id="loginAlert" class="hidden mb-4 p-3 rounded-lg text-sm bg-red-50 text-red-700 border border-red-200"></div>
+      <form id="loginForm" class="space-y-4">
+        <div>
+          <label class="block text-sm font-medium mb-1 text-slate-700">Username</label>
+          <input id="loginUsername" type="text" class="clay-input" placeholder="mis. admin atau NIS Anda" required />
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-1 text-slate-700">Password</label>
+          <input id="loginPassword" type="password" class="clay-input" placeholder="••••••••" required />
+        </div>
+        <div class="flex gap-3 pt-2">
+          <button class="flex-1 clay-btn clay-btn-primary">Masuk</button>
+          <button id="repairAdmin" type="button" class="clay-btn clay-sm w-14 h-14 flex items-center justify-center" title="Pulihkan akun admin">
+            <i class="bx bx-wrench text-xl"></i>
+          </button>
+        </div>
+        <p class="text-xs text-slate-500 text-center pt-2">
+            Siswa masuk menggunakan NIS sebagai username & password.<br>
+            Akun default admin: <span class="font-semibold">admin / password123</span>
+        </p>
+      </form>
+    </div>
+  </section>
+
+  <!-- App Shell -->
+  <section id="appShell" class="app hidden">
+    <aside class="sidebar no-print">
+      <div class="brand">
+        <i class='bx bxs-dashboard'></i>
+        <span class="font-bold">Poin Siswa</span>
+      </div>
+      <nav class="nav" id="menuList"></nav>
+      <button class="logout clay-btn flex items-center gap-3" id="logoutBtn" title="Logout">
+        <i class='bx bx-log-out-circle text-2xl'></i><span class="label font-medium">Logout</span>
+      </button>
+    </aside>
+
+    <main id="content" class="content">
+      <div class="topbar no-print">
+        <div class="left-controls">
+          <button id="collapseBtn" class="icon-btn clay-btn clay-sm" title="Ciutkan / Lebarkan Sidebar">
+            <i class='bx bx-menu'></i>
+          </button>
+          <div id="helloText" class="welcome hidden sm:block">Halo, Pengguna</div>
+        </div>
+        <div id="actionBar" class="flex items-center gap-2">
+            <div class="text-sm text-slate-500 mr-2" id="breadcrumb">Dashboard</div>
+            <button id="notificationBtn" class="notification-bell icon-btn clay-btn clay-sm" title="Notifikasi">
+                <i class="bx bx-bell text-xl"></i>
+                <div id="notificationBadge" class="notification-badge hidden"></div>
+            </button>
+            <button id="btnRefresh" class="icon-btn clay-btn clay-sm" title="Refresh Data">
+              <i class="bx bx-refresh text-xl"></i>
+            </button>
+            <button id="btnPrint" class="icon-btn clay-btn clay-sm" title="Cetak Halaman">
+              <i class="bx bx-printer text-xl"></i>
+            </button>
+        </div>
+      </div>
+      
+      <div id="viewArea" class="space-y-6 mt-4"></div>
+      <div id="printArea" class="hidden"></div>
+    </main>
+  </section>
+
+  <!-- Universal Modal -->
+  <div id="modal" class="hidden fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 no-print">
+    <div id="modalContent" class="modal-content clay w-full max-w-lg p-1">
+      <div id="modalHeader" class="p-4 flex justify-between items-center">
+        <h3 id="modalTitle" class="font-bold text-lg text-slate-900">Modal Title</h3>
+        <button id="closeModalBtn" class="text-slate-400 hover:text-red-600 text-2xl transition-colors">&times;</button>
+      </div>
+      <div id="modalBody" class="p-6 pt-2 max-h-[70vh] overflow-y-auto"></div>
+    </div>
+  </div>
+
+  <!-- Empty State Template -->
+  <template id="tpl-empty">
+    <div class="text-center py-12 border-2 border-dashed rounded-xl text-slate-500 bg-slate-50">
+      <div class="inline-block p-4 bg-slate-200 rounded-full mb-4"></div>
+      <h3 class="font-semibold text-lg text-slate-800 mb-1">Belum Ada Data</h3>
+      <p class="text-sm mb-4">Sepertinya belum ada data yang ditambahkan di sini.</p>
+    </div>
+  </template>
+
+  <script>
+  // ===========================
+  // FIREBASE SETUP
+  // ===========================
+  // TODO: GANTI DENGAN KONFIGURASI FIREBASE ANDA
+  const firebaseConfig = {
+    apiKey: "AIzaSyBr9UTja1VDl_oPLmWA8zy4ROYlKcrULbk",
+    authDomain: "pelanggaran-dan-apesiasi.firebaseapp.com",
+    projectId: "pelanggaran-dan-apesiasi",
+    storageBucket: "pelanggaran-dan-apesiasi.firebasestorage.app",
+    messagingSenderId: "922679769143",
+    appId: "1:922679769143:web:18520b85512c8175d267b2"
+  };
+
+  // Initialize Firebase
+  firebase.initializeApp(firebaseConfig);
+  const firestore = firebase.firestore();
+  const storage = firebase.storage();
+
+  // ===========================
+  // Utilities & Storage Layer
+  // ===========================
+  const DB_KEYS = { USERS: 'users', SISWA: 'siswa', KELAS: 'kelas', CATEGORIES: 'categories', PELANGGARAN_TYPES: 'pelanggaran-types', VIOLATIONS: 'violations', APRES_TYPES: 'apres-types', APRES: 'apres', META: 'meta', AUDIT_LOG: 'audit-log', DRAFTS: 'drafts', NOTIFICATIONS: 'notifications', KASUS: 'kasus', WARNINGS: 'warnings' };
+  const SESSION_KEY = 'pps_session_user';
+  const LAST_INPUT_NIS_KEY = 'pps_last_input_nis';
+
+  function uid(prefix='id'){ return prefix + '_' + Math.random().toString(36).slice(2,10) + Date.now().toString(36).slice(4); }
+  function todayISO(){ const d = new Date(); d.setHours(0,0,0,0); return d.toISOString(); }
+  function fmtDate(val){ 
+      if (val && val.toDate) { // Handle Firebase Timestamp
+          val = val.toDate();
+      }
+      const d = new Date(val); 
+      return d.toLocaleString('id-ID', { dateStyle:'medium', timeStyle:'short' }); 
+  }
+  const APPROVAL = { PENDING: 'pending', APPROVED:'approved', REJECTED:'rejected' };
+  const VIOLATION_APPROVAL = { PENDING_L1:'pending_l1', PENDING_L2:'pending_l2', APPROVED:'approved', REJECTED:'rejected', APPEAL_PENDING: 'appeal_pending' };
+
+  // ===========================
+  // UI Helpers (Toast, Modal, Confirm, Loaders)
+  // ===========================
+  function showToast(message, type = 'success') {
+    Toastify({ text: message, duration: 3000, gravity: "top", position: "right", stopOnFocus: true, style: { background: type === 'success' ? 'var(--success)' : (type === 'error' ? 'var(--danger)' : 'var(--brand-primary)'), borderRadius: '12px', boxShadow: 'var(--clay-shadow)' } }).showToast();
+  }
+  function showConfirm(title = 'Anda yakin?', text = 'Aksi ini tidak dapat dibatalkan!') {
+    return Swal.fire({ title: title, text: text, icon: 'warning', showCancelButton: true, confirmButtonColor: 'var(--brand-primary)', cancelButtonColor: 'var(--danger)', confirmButtonText: 'Ya, Lanjutkan!', cancelButtonText: 'Batal' });
+  }
+  const modal = document.getElementById('modal');
+  const modalContent = document.getElementById('modalContent');
+  const modalTitle = document.getElementById('modalTitle');
+  const modalBody = document.getElementById('modalBody');
+  const closeModalBtn = document.getElementById('closeModalBtn');
+  let onSaveCallback = null;
+  function showModal(title, bodyHTML, onSave, size = 'lg') {
+    modalTitle.textContent = title;
+    modalBody.innerHTML = bodyHTML;
+    onSaveCallback = onSave;
+    modalContent.classList.remove('max-w-lg', 'max-w-2xl', 'max-w-4xl');
+    modalContent.classList.add(`max-w-${size}`);
+    modal.classList.remove('hidden');
+    const form = modalBody.querySelector('form');
+    if (form) form.addEventListener('submit', handleFormSubmit);
+  }
+  function hideModal() {
+    const form = modalBody.querySelector('form');
+    if (form) form.removeEventListener('submit', handleFormSubmit);
+    modal.classList.add('hidden');
+    modalBody.innerHTML = '';
+    onSaveCallback = null;
+  }
+  function handleFormSubmit(e) {
+    e.preventDefault();
+    if (onSaveCallback) {
+      const button = e.target.querySelector('button[type="submit"]');
+      if (button) showLoading(button);
+      onSaveCallback(new FormData(e.target), button);
+    }
+  }
+  closeModalBtn.addEventListener('click', hideModal);
+  modal.addEventListener('click', (e) => { if (e.target === modal) hideModal(); });
+  function showLoading(button) {
+    button.disabled = true;
+    button.dataset.originalText = button.innerHTML;
+    button.innerHTML = `<div class="flex items-center justify-center gap-2"><div class="spinner"></div><span>Memproses...</span></div>`;
+  }
+  function hideLoading(button) {
+    if (button) {
+      button.disabled = false;
+      button.innerHTML = button.dataset.originalText || 'Simpan';
+    }
+  }
+
+  // ===========================
+  // Core App Logic & Auth
+  // ===========================
+  async function logAction(action, details = {}){
+    const session = getSession();
+    const logEntry = { 
+        action, 
+        details, 
+        actor: session ? session.username : 'system', 
+        role: session ? session.role : 'system', 
+        at: firebase.firestore.FieldValue.serverTimestamp() 
+    };
+    await firestore.collection(DB_KEYS.AUDIT_LOG).add(logEntry);
+  }
+  async function seedOnce(){
+    const metaRef = firestore.collection(DB_KEYS.META).doc('config');
+    const metaDoc = await metaRef.get();
+
+    if (!metaDoc.exists) {
+        console.log("First time setup: Seeding database...");
+        // Seed meta config
+        await metaRef.set({
+            weights: {},
+            countingMode: 'approved_only',
+            thresholds: { sp1: 50, sp2: 75, skorsing: 100 },
+            reportFormat: 'LAP/{NO}/SMK-XYZ/{BLN}/{THN}',
+            digitalSignature: '', 
+            sla: { l1Days: 3, l2Days: 2 },
+            seeded: true
+        });
+
+        // Seed admin user
+        const usersQuery = await firestore.collection(DB_KEYS.USERS).where('username', '==', 'admin').get();
+        if (usersQuery.empty) {
+            await firestore.collection(DB_KEYS.USERS).add({
+                username:'admin', 
+                password:'password123', 
+                nama:'Super Administrator', 
+                role:'admin_super', 
+                createdAt: firebase.firestore.FieldValue.serverTimestamp(), 
+                active:true
+            });
+        }
+        console.log("Seeding complete.");
+    }
+  }
+  function getSession(){ return JSON.parse(localStorage.getItem(SESSION_KEY) || 'null'); }
+  function setSession(u){ 
+      if (u) {
+          localStorage.setItem(SESSION_KEY, JSON.stringify({ id:u.id, username:u.username, nama:u.nama, role:u.role }));
+      } else {
+          localStorage.removeItem(SESSION_KEY);
+      }
+  }
+  function requireAuth(){ const s=getSession(); if(!s){ showLogin(); return null; } return s; }
+  function requireRole(roles){
+    const s = requireAuth();
+    if(!s || !roles.includes(s.role)){
+      showToast('Akses ditolak. Anda tidak memiliki izin.', 'error');
+      return false;
+    }
+    return s;
+  }
+
+  const loginPage = document.getElementById('loginPage');
+  const appShell   = document.getElementById('appShell');
+  const menuList   = document.getElementById('menuList');
+  const viewArea   = document.getElementById('viewArea');
+  const breadcrumb = document.getElementById('breadcrumb');
+  const helloText  = document.getElementById('helloText');
+  const printArea  = document.getElementById('printArea');
+
+  function showLogin(){ loginPage.style.display = 'flex'; appShell.classList.remove('show'); }
+  function showApp(){ loginPage.style.display = 'none'; appShell.classList.add('show'); }
+
+  const loginForm = document.getElementById('loginForm');
+  const loginAlert = document.getElementById('loginAlert');
+  loginForm.addEventListener('submit', async (e)=>{
+    e.preventDefault();
+    const username = document.getElementById('loginUsername').value.trim();
+    const password = document.getElementById('loginPassword').value;
+    let loggedIn = false;
+    let sessionData = null;
+
+    // 1. Cek user non-siswa
+    const userQuery = await firestore.collection(DB_KEYS.USERS)
+        .where('username', '==', username)
+        .where('password', '==', password)
+        .where('active', '==', true)
+        .get();
+
+    if (!userQuery.empty) {
+        const userDoc = userQuery.docs[0];
+        sessionData = { id: userDoc.id, ...userDoc.data() };
+        logAction('LOGIN_SUCCESS', { username });
+        loggedIn = true;
+    } 
+    // 2. Cek login siswa (NIS sebagai username & password)
+    else if (username === password) {
+        const siswaQuery = await firestore.collection(DB_KEYS.SISWA)
+            .where('nis', '==', username)
+            .where('active', '==', true)
+            .get();
+        
+        if (!siswaQuery.empty) {
+            const siswaDoc = siswaQuery.docs[0];
+            const siswaData = siswaDoc.data();
+            sessionData = {
+                id: siswaDoc.id,
+                username: siswaData.nis,
+                nama: siswaData.nama,
+                role: 'siswa'
+            };
+            logAction('LOGIN_SUCCESS_SISWA', { nis: username });
+            loggedIn = true;
+        }
+    }
+
+    if(loggedIn){
+      setSession(sessionData);
+      initRoleUI();
+      showApp();
+      route('dashboard');
+      loginForm.reset();
+      loginAlert.classList.add('hidden');
+    } else {
+      logAction('LOGIN_FAIL', { username });
+      loginAlert.textContent = 'Username atau password salah, atau akun nonaktif.';
+      loginAlert.classList.remove('hidden');
+    }
+  });
+  document.getElementById('logoutBtn').addEventListener('click', ()=>{
+    logAction('LOGOUT');
+    setSession(null);
+    showLogin();
+  });
+  document.getElementById('repairAdmin').addEventListener('click', async ()=>{
+    const usersQuery = await firestore.collection(DB_KEYS.USERS).where('username', '==', 'admin').get();
+    if (usersQuery.empty) {
+        await firestore.collection(DB_KEYS.USERS).add({
+            username:'admin', password:'password123', nama:'Super Administrator', role:'admin_super', 
+            createdAt: firebase.firestore.FieldValue.serverTimestamp(), active:true 
+        });
+    } else {
+        const adminDoc = usersQuery.docs[0];
+        await firestore.collection(DB_KEYS.USERS).doc(adminDoc.id).update({
+            password: 'password123',
+            active: true,
+            role: 'admin_super'
+        });
+    }
+    logAction('REPAIR_ADMIN');
+    Swal.fire('Berhasil!', 'Akun admin telah dipulihkan: admin / password123', 'success');
+  });
+
+  // ===========================
+  // Navigation & UI Rendering
+  // ===========================
+  document.getElementById('btnPrint').addEventListener('click', ()=>{ window.print(); });
+  document.getElementById('btnRefresh').addEventListener('click', ()=>{ const s=requireAuth(); if(!s) return; route(currentRoute); });
+  document.getElementById('collapseBtn').addEventListener('click', ()=>{
+    const willCollapse = !appShell.classList.contains('collapsed');
+    appShell.classList.toggle('collapsed', willCollapse);
+    localStorage.setItem('sidebar_collapsed', willCollapse ? '1' : '0');
+  });
+
+  // NEW: Revamped Menu Structure
+  const MENUS = {
+    admin_super: [ 
+        { id:'dashboard', label:'Dashboard', icon:'home' }, 
+        { id:'input-catatan', label:'Input Catatan', icon:'plus' }, 
+        { id:'riwayat', label:'Riwayat & Approval', icon:'clock' }, 
+        { id:'laporan', label:'Laporan', icon:'report' }, 
+        { id:'manajemen-siswa', label:'Manajemen Siswa', icon:'id' }, 
+        { id:'manajemen-kelas', label:'Manajemen Kelas', icon:'kelas' }, 
+        { id:'manajemen-user', label:'Manajemen User', icon:'users' }, 
+        { id:'pengaturan', label:'Pengaturan', icon:'gear' }
+    ],
+    admin_operasional: [
+        { id:'dashboard', label:'Dashboard', icon:'home' }, 
+        { id:'input-catatan', label:'Input Catatan', icon:'plus' }, 
+        { id:'riwayat', label:'Riwayat & Approval', icon:'clock' }, 
+        { id:'laporan', label:'Laporan', icon:'report' }, 
+        { id:'manajemen-siswa', label:'Manajemen Siswa', icon:'id' }, 
+        { id:'manajemen-kelas', label:'Manajemen Kelas', icon:'kelas' }, 
+        { id:'manajemen-user', label:'Manajemen User', icon:'users' }
+    ],
+    guru: [ 
+        { id:'dashboard', label:'Dashboard', icon:'home' }, 
+        { id:'input-catatan', label:'Input Catatan', icon:'plus' }, 
+        { id:'riwayat', label:'Riwayat', icon:'clock' } 
+    ],
+    wali: [ 
+        { id:'dashboard', label:'Dashboard', icon:'home' }, 
+        { id:'input-catatan', label:'Input Catatan', icon:'plus' }, 
+        { id:'riwayat', label:'Riwayat & Approval', icon:'clock' }, 
+        { id:'laporan', label:'Laporan', icon:'report' }, 
+        { id:'pantau-kelas', label:'Pantau Kelas', icon:'eye' }, 
+        { id:'kasus', label:'Kasus & SP', icon:'kasus' } 
+    ],
+    siswa: [ 
+        { id:'dashboard', label:'Dashboard', icon:'home' }, 
+        { id:'profil-saya', label:'Profil & Poin Saya', icon:'user' }, 
+        { id:'riwayat', label:'Riwayat Saya', icon:'clock' }, 
+        { id:'leaderboard', label:'Leaderboard', icon:'leaderboard' } 
+    ]
+  };
+
+  function iconHTML(name){
+    const i = { home:'bx-home-alt', users:'bx-group', id:'bx-id-card', kelas:'bx-buildings', kasus:'bx-folder-open', leaderboard:'bx-trophy', tag:'bx-purchase-tag-alt', flag:'bx-flag', award:'bx-award', plus:'bx-plus-circle', gift:'bx-gift', clock:'bx-history', report:'bx-file', gear:'bx-cog', eye:'bx-show', user:'bx-user-circle', qr:'bx-qr-scan', upload:'bx-upload', download:'bx-download', ban:'bx-block' };
+    return `<i class='bx ${i[name] || 'bx-question-mark'}'></i>`;
+  }
+
+  let currentRoute = 'dashboard';
+  function route(id){ currentRoute = id; breadcrumb.textContent = MENUTitle(id); render(id); highlightMenu(id); }
+  function MENUTitle(id){ const s = requireAuth(); const list = MENUS[s.role] || []; const found = list.find(m=>m.id===id); return found? found.label : 'Dashboard'; }
+  function highlightMenu(id){
+    [...menuList.querySelectorAll('button[data-route]')].forEach(btn=>{
+      if(btn.dataset.route===id) btn.classList.add('active'); else btn.classList.remove('active');
+    });
+  }
+
+  function initRoleUI(){
+    const s = requireAuth(); if(!s) return;
+    menuList.innerHTML = '';
+    (MENUS[s.role]||[]).forEach(m=>{
+      const button = document.createElement('button');
+      button.className = 'navlink';
+      button.title = m.label;
+      button.innerHTML = `${iconHTML(m.icon)}<span class="label">${m.label}</span>`;
+      button.dataset.route = m.id;
+      button.addEventListener('click', (e)=> { e.preventDefault(); route(m.id); });
+      menuList.appendChild(button);
+    });
+    helloText.textContent = `Halo, ${s.nama}`;
+    updateNotificationBadge();
+  }
+
+  // NEW: Firestore Data Layer
+  const db = {
+      getCollection: async (collectionName) => {
+          const snapshot = await firestore.collection(collectionName).get();
+          return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      },
+      getDoc: async (collectionName, docId) => {
+          const doc = await firestore.collection(collectionName).doc(docId).get();
+          return doc.exists ? { id: doc.id, ...doc.data() } : null;
+      },
+      addDoc: async (collectionName, data) => {
+          return await firestore.collection(collectionName).add(data);
+      },
+      updateDoc: async (collectionName, docId, data) => {
+          return await firestore.collection(collectionName).doc(docId).update(data);
+      },
+      deleteDoc: async (collectionName, docId) => {
+          return await firestore.collection(collectionName).doc(docId).delete();
+      },
+      // Specific getters for caching/convenience
+      users: () => db.getCollection(DB_KEYS.USERS),
+      siswa: () => db.getCollection(DB_KEYS.SISWA),
+      kelas: () => db.getCollection(DB_KEYS.KELAS),
+      categories: () => db.getCollection(DB_KEYS.CATEGORIES),
+      types: () => db.getCollection(DB_KEYS.PELANGGARAN_TYPES),
+      apresTypes: () => db.getCollection(DB_KEYS.APRES_TYPES),
+      violations: () => db.getCollection(DB_KEYS.VIOLATIONS),
+      apres: () => db.getCollection(DB_KEYS.APRES),
+      warnings: () => db.getCollection(DB_KEYS.WARNINGS),
+      notifications: () => db.getCollection(DB_KEYS.NOTIFICATIONS),
+      auditLog: () => db.getCollection(DB_KEYS.AUDIT_LOG),
+      getMeta: async () => {
+          const doc = await firestore.collection(DB_KEYS.META).doc('config').get();
+          return doc.exists ? doc.data() : {};
+      },
+      // Drafts still use localStorage as they are session-specific
+      drafts: (user) => JSON.parse(localStorage.getItem(`pps_drafts_${user.username}`) || '[]'),
+      saveDrafts: (user, drafts) => localStorage.setItem(`pps_drafts_${user.username}`, JSON.stringify(drafts))
+  };
+
+  // ===========================
+  // Notification System
+  // ===========================
+  document.getElementById('notificationBtn').addEventListener('click', showNotifications);
+
+  async function createNotification(userId, message, linkRoute = null) {
+      const notif = {
+          userId: userId,
+          message: message,
+          linkRoute: linkRoute,
+          at: firebase.firestore.FieldValue.serverTimestamp(),
+          read: false
+      };
+      await db.addDoc(DB_KEYS.NOTIFICATIONS, notif);
+      updateNotificationBadge();
+  }
+
+  async function updateNotificationBadge() {
+      const session = getSession();
+      if (!session) return;
+      const snapshot = await firestore.collection(DB_KEYS.NOTIFICATIONS)
+          .where('userId', '==', session.id)
+          .where('read', '==', false)
+          .get();
+      const unreadCount = snapshot.size;
+      const badge = document.getElementById('notificationBadge');
+      if (unreadCount > 0) {
+          badge.textContent = unreadCount > 9 ? '9+' : unreadCount;
+          badge.classList.remove('hidden');
+      } else {
+          badge.classList.add('hidden');
+      }
+  }
+
+  async function showNotifications() {
+      const session = getSession();
+      if (!session) return;
+      
+      const snapshot = await firestore.collection(DB_KEYS.NOTIFICATIONS)
+          .where('userId', '==', session.id)
+          .orderBy('at', 'desc')
+          .get();
+      
+      const notifications = snapshot.docs.map(doc => ({id: doc.id, ...doc.data()}));
+
+      const bodyHTML = notifications.length > 0 ? `
+          <div class="space-y-3">
+              ${notifications.map(n => `
+                  <div class="p-3 rounded-lg cursor-pointer hover:bg-slate-200/50 ${!n.read ? 'bg-blue-100/50' : 'bg-slate-100/50'}" 
+                       onclick="handleNotificationClick('${n.id}', ${n.linkRoute ? `'${n.linkRoute}'` : null})">
+                      <p class="text-sm text-slate-800">${n.message}</p>
+                      <p class="text-xs text-slate-500 mt-1">${fmtDate(n.at)}</p>
+                  </div>
+              `).join('')}
+          </div>
+      ` : `<p class="text-sm text-center text-slate-500 py-4">Tidak ada notifikasi.</p>`;
+
+      showModal('Notifikasi', bodyHTML);
+
+      // Mark all as read
+      const batch = firestore.batch();
+      notifications.forEach(n => {
+          if (!n.read) {
+              const docRef = firestore.collection(DB_KEYS.NOTIFICATIONS).doc(n.id);
+              batch.update(docRef, { read: true });
+          }
+      });
+      await batch.commit();
+      updateNotificationBadge();
+  }
+
+  window.handleNotificationClick = (notifId, linkRoute) => {
+      hideModal();
+      if (linkRoute) {
+          route(linkRoute);
+      }
+  }
+
+  function card(title, bodyHTML, actionsHTML=''){
+    return `<div class="panel">
+      <div class="flex justify-between items-center mb-4">
+        <h3 class="text-lg font-semibold text-slate-900">${title}</h3>
+        <div class="flex items-center gap-2">${actionsHTML}</div>
+      </div>
+      <div>${bodyHTML}</div>
+    </div>`;
+  }
+  function table(headers, rowsHTML, options = {}){
+    const thead = headers.map(h=>`<th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">${h}</th>`).join('');
+    return `<div class="overflow-auto"><table class="min-w-full text-sm">
+      <thead class="bg-slate-200/50"><tr>${thead}</tr></thead>
+      <tbody class="divide-y divide-slate-200/50">${rowsHTML}</tbody>
+    </table></div>`;
+  }
+  function badge(text, color='slate'){ 
+    const colors = { slate: 'bg-slate-200 text-slate-700', blue: 'bg-blue-200 text-blue-700', green: 'bg-green-200 text-green-700', red: 'bg-red-200 text-red-700', yellow: 'bg-yellow-200 text-yellow-700', purple: 'bg-purple-200 text-purple-700', orange: 'bg-orange-200 text-orange-700' };
+    return `<span class="px-2.5 py-0.5 rounded-full text-xs font-medium ${colors[color] || colors.slate}">${text}</span>`; 
+  }
+  function statusBadge(st, type = 'pelanggaran'){
+    if (type === 'pelanggaran') {
+      if(st===VIOLATION_APPROVAL.APPROVED) return badge('Approved','green');
+      if(st===VIOLATION_APPROVAL.REJECTED) return badge('Rejected','red');
+      if(st===VIOLATION_APPROVAL.PENDING_L2) return badge('Pending Admin','yellow');
+      if(st===VIOLATION_APPROVAL.APPEAL_PENDING) return badge('Banding Diajukan', 'purple');
+      return badge('Pending Wali','yellow');
+    } else { // Apresiasi
+      if(st===APPROVAL.APPROVED) return badge('Approved','green');
+      if(st===APPROVAL.REJECTED) return badge('Rejected','red');
+      return badge('Pending','yellow');
+    }
+  }
+
+  async function render(routeId){
+    const s = requireAuth(); if(!s) return;
+    viewArea.innerHTML = '<div class="flex justify-center items-center h-64"><div class="spinner text-4xl"></div></div>'; // Show a loader
+    
+    // Use a slight delay to ensure loader is visible before heavy processing
+    setTimeout(async () => { 
+      viewArea.classList.add('view-content');
+      try {
+        switch(routeId){
+          case 'dashboard': await renderDashboard(s); break;
+          case 'manajemen-user': await renderUsers(); break;
+          case 'manajemen-siswa': await renderSiswa(); break;
+          case 'manajemen-kelas': await renderKelas(); break;
+          case 'kasus': renderKasus(); break; // Placeholder, no data fetching
+          case 'leaderboard': await renderLeaderboard(); break;
+          case 'input-catatan': await renderInputCatatan(); break;
+          case 'riwayat': await renderRiwayat(); break;
+          case 'laporan': await renderLaporan(); break;
+          case 'pengaturan': await renderPengaturanLengkap(); break;
+          case 'pantau-kelas': await renderPantauKelas(); break;
+          case 'profil-saya': await renderProfilSaya(); break;
+          default: await renderDashboard(s); break;
+        }
+      } catch (error) {
+        console.error("Error rendering page:", error);
+        viewArea.innerHTML = card('Error', `<p class="text-red-500">Gagal memuat data. Silakan coba lagi.</p><pre class="text-xs mt-2">${error.message}</pre>`);
+      }
+      viewArea.addEventListener('animationend', () => viewArea.classList.remove('view-content'), { once: true });
+    }, 10);
+  }
+
+  // ==================================================
+  // ROLE-BASED DASHBOARD (NEW & ADVANCED)
+  // ==================================================
+  async function renderDashboard(session) {
+    const s = requireAuth();
+    if (!s) return;
+
+    // Destroy any existing Chart instances to prevent memory leaks
+    if (window.activeCharts) {
+      window.activeCharts.forEach(chart => chart.destroy());
+    }
+    window.activeCharts = [];
+
+    switch (s.role) {
+      case 'admin_super':
+        await renderSuperAdminDashboard();
+        break;
+      case 'admin_operasional':
+        await renderAdminDashboard();
+        break;
+      case 'wali':
+        await renderWaliDashboard(s);
+        break;
+      case 'guru':
+        await renderGuruDashboard(s);
+        break;
+      case 'siswa':
+        await renderSiswaDashboard(s);
+        break;
+      default:
+        viewArea.innerHTML = card('Selamat Datang', `<p>Halo, ${s.nama}. Selamat datang di sistem Poin Siswa.</p>`);
+    }
+  }
+
+  async function getFilteredViolations(days = 30) {
+    const endDate = new Date();
+    const startDate = new Date();
+    startDate.setDate(endDate.getDate() - days);
+    
+    const snapshot = await firestore.collection(DB_KEYS.VIOLATIONS)
+        .where('at', '>=', startDate)
+        .where('at', '<=', endDate)
+        .get();
+    return snapshot.docs.map(doc => ({id: doc.id, ...doc.data()}));
+  }
+
+  async function renderSuperAdminDashboard() {
+    const daysFilter = 30; // Default filter
+    const [violations, allViolations, allSiswa] = await Promise.all([
+        getFilteredViolations(daysFilter),
+        db.violations(),
+        db.siswa()
+    ]);
+    
+    const approvedThisMonth = violations.filter(v => v.status === VIOLATION_APPROVAL.APPROVED).length;
+    const pendingTotal = allViolations.filter(v => v.status === VIOLATION_APPROVAL.PENDING_L1 || v.status === VIOLATION_APPROVAL.PENDING_L2).length;
+    
+    viewArea.innerHTML = `
+      <div class="flex justify-between items-center mb-4">
+          <h2 class="text-xl font-bold text-slate-900">Dasbor Super Admin</h2>
+          <div class="flex items-center gap-2">
+              <label class="text-sm font-medium">Periode:</label>
+              <select id="periodFilter" class="clay-input text-sm p-2 w-32">
+                  <option value="7">7 Hari</option>
+                  <option value="30" selected>30 Hari</option>
+                  <option value="90">90 Hari</option>
+              </select>
+          </div>
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div class="panel flex items-center gap-4">
+          <div class="p-3 bg-blue-200 rounded-xl text-blue-700 text-2xl">${iconHTML('users')}</div>
+          <div><div class="text-slate-500 text-sm">Total Siswa</div><div class="text-2xl font-bold">${allSiswa.length}</div></div>
+        </div>
+        <div class="panel flex items-center gap-4">
+          <div class="p-3 bg-green-200 rounded-xl text-green-700 text-2xl">${iconHTML('flag')}</div>
+          <div><div class="text-slate-500 text-sm">Approved (${daysFilter} hari)</div><div class="text-2xl font-bold">${approvedThisMonth}</div></div>
+        </div>
+        <div class="panel flex items-center gap-4">
+          <div class="p-3 bg-yellow-200 rounded-xl text-yellow-700 text-2xl">${iconHTML('clock')}</div>
+          <div><div class="text-slate-500 text-sm">Pending (Total)</div><div class="text-2xl font-bold">${pendingTotal}</div></div>
+        </div>
+      </div>
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        ${card('Tren Pelanggaran (Approved)', '<div class="h-80"><canvas id="chartTrend30Days"></canvas></div>')}
+        ${card('Distribusi Status Entri', '<div class="h-80 flex justify-center items-center"><canvas id="chartStatusDistribution"></canvas></div>')}
+        ${card('Pelanggaran per Kategori', '<div class="h-80"><canvas id="chartByCategory"></canvas></div>')}
+        ${card('Pelanggaran per Kelas', '<div class="h-80"><canvas id="chartByClass"></canvas></div>')}
+        ${card('Top 10 Jenis Pelanggaran', '<div class="h-80"><canvas id="chartTop10Types"></canvas></div>')}
+        ${card('Kualitas Data', '<div id="dataQualityCheck" class="space-y-3"></div>')}
+      </div>
+    `;
+
+    document.getElementById('periodFilter').addEventListener('change', (e) => {
+        renderSuperAdminDashboard(); // Re-render with new period
+    });
+    
+    const days = document.getElementById('periodFilter').value;
+    await updateSuperAdminCharts(days);
+  }
+
+  async function updateSuperAdminCharts(days) {
+      if (window.activeCharts) {
+        window.activeCharts.forEach(chart => chart.destroy());
+      }
+      window.activeCharts = [];
+
+      const [filteredViolations, allSiswa, allTypes, allCategories, allViolations] = await Promise.all([
+          getFilteredViolations(days),
+          db.siswa(),
+          db.types(),
+          db.categories(),
+          db.violations()
+      ]);
+      
+      // 1. 30-Day Trend
+      const trendData = filteredViolations.filter(v => v.status === VIOLATION_APPROVAL.APPROVED);
+      const dailyCounts = {};
+      const labels = [];
+      for (let i = days - 1; i >= 0; i--) {
+        const d = new Date();
+        d.setDate(d.getDate() - i);
+        const key = d.toISOString().split('T')[0];
+        labels.push(key);
+        dailyCounts[key] = 0;
+      }
+      trendData.forEach(v => {
+        const key = v.at.toDate().toISOString().split('T')[0];
+        if (dailyCounts[key] !== undefined) dailyCounts[key]++;
+      });
+      renderChart('chartTrend30Days', 'line', {
+        labels: labels,
+        datasets: [{ label: 'Pelanggaran Approved', data: Object.values(dailyCounts), borderColor: 'var(--brand-primary)', tension: 0.1, fill: false }]
+      }, { scales: { x: { type: 'time', time: { unit: 'day' } } } });
+
+      // 2. Status Distribution
+      const statusCounts = filteredViolations.reduce((acc, v) => {
+        acc[v.status] = (acc[v.status] || 0) + 1;
+        return acc;
+      }, {});
+      renderChart('chartStatusDistribution', 'doughnut', {
+        labels: Object.keys(statusCounts).map(s => s.replace(/_/g, ' ').toUpperCase()),
+        datasets: [{ data: Object.values(statusCounts), backgroundColor: ['#f59e0b', '#facc15', '#16a34a', '#dc2626', '#a855f7'] }]
+      }, { responsive: true, maintainAspectRatio: false });
+
+      // 3. By Category
+      const catCounts = filteredViolations.filter(v=>v.status === VIOLATION_APPROVAL.APPROVED).reduce((acc, v) => {
+          const type = allTypes.find(t => t.id === v.typeId);
+          if (type) {
+              const cat = allCategories.find(c => c.id === type.categoryId);
+              if (cat) {
+                  acc[cat.nama] = (acc[cat.nama] || 0) + 1;
+              }
+          }
+          return acc;
+      }, {});
+      renderChart('chartByCategory', 'bar', {
+          labels: Object.keys(catCounts),
+          datasets: [{ label: 'Jumlah Pelanggaran', data: Object.values(catCounts), backgroundColor: 'rgba(220, 38, 38, 0.8)' }]
+      });
+
+      // 4. By Class
+      const classCounts = filteredViolations.filter(v=>v.status === VIOLATION_APPROVAL.APPROVED).reduce((acc, v) => {
+          const siswa = allSiswa.find(s => s.nis === v.nis);
+          if (siswa && siswa.kelas) {
+              acc[siswa.kelas] = (acc[siswa.kelas] || 0) + 1;
+          }
+          return acc;
+      }, {});
+      renderChart('chartByClass', 'bar', {
+          labels: Object.keys(classCounts),
+          datasets: [{ label: 'Jumlah Pelanggaran', data: Object.values(classCounts), backgroundColor: 'rgba(37, 99, 235, 0.8)' }]
+      });
+
+      // 5. Top 10 Types
+      const typeCounts = filteredViolations.filter(v=>v.status === VIOLATION_APPROVAL.APPROVED).reduce((acc, v) => {
+          acc[v.typeId] = (acc[v.typeId] || 0) + 1;
+          return acc;
+      }, {});
+      const top10Types = Object.entries(typeCounts).sort((a,b) => b[1] - a[1]).slice(0, 10);
+      renderChart('chartTop10Types', 'bar', {
+          labels: top10Types.map(([typeId, count]) => allTypes.find(t => t.id === typeId)?.nama || 'N/A'),
+          datasets: [{ label: 'Jumlah', data: top10Types.map(t => t[1]), backgroundColor: 'rgba(245, 158, 11, 0.8)' }]
+      }, { indexAxis: 'y' });
+
+      // 6. Data Quality
+      const orphanedViolations = allViolations.filter(v => !allSiswa.some(s => s.nis === v.nis)).length;
+      const emptyCategories = allCategories.filter(c => !allTypes.some(t => t.categoryId === c.id)).length;
+      document.getElementById('dataQualityCheck').innerHTML = `
+        <div class="flex justify-between items-center text-sm">
+          <span>Entri dengan NIS tidak valid:</span> <span class="font-bold text-red-600">${orphanedViolations}</span>
+        </div>
+        <div class="flex justify-between items-center text-sm">
+          <span>Kategori tanpa jenis pelanggaran:</span> <span class="font-bold text-yellow-600">${emptyCategories}</span>
+        </div>
+        <button onclick="route('pengaturan')" class="text-xs text-blue-600 hover:underline mt-2">Perbaiki di Pengaturan</button>
+      `;
+  }
+
+  async function renderAdminDashboard() {
+      // For admin_operasional
+      const violations = await db.violations();
+      const approvedWeekly = {};
+      violations.filter(v => v.status === VIOLATION_APPROVAL.APPROVED).forEach(v => {
+          const d = v.at.toDate();
+          const year = d.getFullYear();
+          const week = Math.ceil((((d - new Date(year, 0, 1)) / 86400000) + new Date(year, 0, 1).getDay() + 1) / 7);
+          const key = `${year}-W${week}`;
+          approvedWeekly[key] = (approvedWeekly[key] || 0) + 1;
+      });
+      const sortedWeeks = Object.keys(approvedWeekly).sort();
+
+      viewArea.innerHTML = `
+        <h2 class="text-xl font-bold mb-4 text-slate-900">Dasbor Admin Operasional</h2>
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          ${card('Antrean Pending (L1 vs L2)', '<div class="h-80"><canvas id="chartPendingFunnel"></canvas></div>')}
+          ${card('Tren Approved Mingguan', '<div class="h-80"><canvas id="chartWeeklyTrend"></canvas></div>')}
+          ${card('Top 5 Kategori Pelanggaran', '<div class="h-80"><canvas id="chartTop5CatAdmin"></canvas></div>')}
+        </div>
+      `;
+      
+      const pendingL1 = violations.filter(v => v.status === VIOLATION_APPROVAL.PENDING_L1).length;
+      const pendingL2 = violations.filter(v => v.status === VIOLATION_APPROVAL.PENDING_L2).length;
+      renderChart('chartPendingFunnel', 'bar', {
+          labels: ['Pending L1 (Wali)', 'Pending L2 (Admin)'],
+          datasets: [{ data: [pendingL1, pendingL2], backgroundColor: ['#f59e0b', '#facc15'] }]
+      }, { plugins: { legend: { display: false } } });
+      
+      renderChart('chartWeeklyTrend', 'line', {
+          labels: sortedWeeks,
+          datasets: [{ label: 'Approved', data: sortedWeeks.map(w => approvedWeekly[w]), borderColor: 'var(--success)' }]
+      });
+
+      const [types, categories] = await Promise.all([db.types(), db.categories()]);
+      const catCounts = violations.filter(v => v.status === VIOLATION_APPROVAL.APPROVED).reduce((acc, v) => {
+          const type = types.find(t => t.id === v.typeId);
+          if (type) {
+              const cat = categories.find(c => c.id === type.categoryId);
+              if (cat) acc[cat.nama] = (acc[cat.nama] || 0) + 1;
+          }
+          return acc;
+      }, {});
+      const top5Cats = Object.entries(catCounts).sort((a,b) => b[1] - a[1]).slice(0, 5);
+      renderChart('chartTop5CatAdmin', 'bar', {
+          labels: top5Cats.map(c => c[0]),
+          datasets: [{ label: 'Jumlah', data: top5Cats.map(c => c[1]), backgroundColor: 'rgba(220, 38, 38, 0.8)' }]
+      });
+  }
+
+  async function renderWaliDashboard(session) {
+    const [allKelas, allSiswa, allViolations, meta] = await Promise.all([
+        db.kelas(), db.siswa(), db.violations(), db.getMeta()
+    ]);
+
+    const kelasDiampu = allKelas.filter(k => k.waliId === session.id).map(k => k.nama);
+
+    if (kelasDiampu.length === 0) {
+      viewArea.innerHTML = card('Informasi', '<p>Akun Anda belum terhubung dengan kelas manapun. Hubungi admin untuk menetapkan kelas yang diampu melalui menu "Kelola Kelas".</p>');
+      return;
+    }
+
+    const siswaDiampu = allSiswa.filter(s => kelasDiampu.includes(s.kelas));
+    const siswaNisSet = new Set(siswaDiampu.map(s => s.nis));
+    const violationsDiampu = allViolations.filter(v => siswaNisSet.has(v.nis));
+    
+    viewArea.innerHTML = `
+      <h2 class="text-xl font-bold mb-4 text-slate-900">Dashboard Wali Kelas: ${kelasDiampu.join(', ')}</h2>
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        ${card('Tren Pelanggaran 30 Hari (Kelas Anda)', '<div class="h-80"><canvas id="chartWaliTrend"></canvas></div>')}
+        ${card('Peringkat Siswa Poin Tertinggi', '<div class="h-80"><canvas id="chartWaliTopSiswa"></canvas></div>')}
+        ${card('Status Pending L1 Anda', '<div class="h-80 flex justify-center items-center"><canvas id="chartWaliPendingSLA"></canvas></div>')}
+      </div>
+    `;
+
+    const trendData = violationsDiampu.filter(v => v.status === VIOLATION_APPROVAL.APPROVED && v.at.toDate() >= new Date(new Date().setDate(new Date().getDate() - 30)));
+    const dailyCounts = {};
+    for (let i = 29; i >= 0; i--) {
+        const d = new Date(); d.setDate(d.getDate() - i);
+        dailyCounts[d.toISOString().split('T')[0]] = 0;
+    }
+    trendData.forEach(v => {
+        const key = v.at.toDate().toISOString().split('T')[0];
+        if(dailyCounts[key] !== undefined) dailyCounts[key]++;
+    });
+    renderChart('chartWaliTrend', 'line', {
+        labels: Object.keys(dailyCounts),
+        datasets: [{ label: 'Pelanggaran', data: Object.values(dailyCounts), borderColor: 'var(--danger)'}]
+    }, { scales: { x: { type: 'time', time: { unit: 'day' } } } });
+
+    const poinPerSiswa = violationsDiampu.filter(v => v.status === VIOLATION_APPROVAL.APPROVED).reduce((acc, v) => {
+        acc[v.nis] = (acc[v.nis] || 0) + v.effPoin;
+        return acc;
+    }, {});
+    const topSiswa = Object.entries(poinPerSiswa).sort((a,b) => b[1] - a[1]).slice(0, 10);
+    renderChart('chartWaliTopSiswa', 'bar', {
+        labels: topSiswa.map(([nis, _]) => siswaDiampu.find(s => s.nis === nis)?.nama || nis),
+        datasets: [{ label: 'Poin', data: topSiswa.map(([_, poin]) => poin), backgroundColor: 'var(--danger)' }]
+    }, { indexAxis: 'y' });
+    
+    const slaDays = (meta.sla || { l1Days: 3 }).l1Days;
+    const pendingL1 = violationsDiampu.filter(v => v.status === VIOLATION_APPROVAL.PENDING_L1);
+    const overdue = pendingL1.filter(v => (new Date() - v.at.toDate()) / (1000*60*60*24) > slaDays).length;
+    renderChart('chartWaliPendingSLA', 'doughnut', {
+        labels: [`Tepat Waktu (<= ${slaDays} hari)`, `Terlambat (> ${slaDays} hari)`],
+        datasets: [{ data: [pendingL1.length - overdue, overdue], backgroundColor: ['#16a34a', '#f59e0b'] }]
+    });
+  }
+
+  async function renderGuruDashboard(session) {
+    const violationsByGuru = (await db.violations()).filter(v => v.by === session.username);
+    const trendData = {};
+    for (let i = 29; i >= 0; i--) {
+        const d = new Date(); d.setDate(d.getDate() - i);
+        trendData[d.toISOString().split('T')[0]] = 0;
+    }
+    violationsByGuru.forEach(v => {
+        const key = v.at.toDate().toISOString().split('T')[0];
+        if(trendData[key] !== undefined) trendData[key]++;
+    });
+
+    viewArea.innerHTML = `
+      <h2 class="text-xl font-bold mb-4 text-slate-900">Dasbor Guru</h2>
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        ${card('Tren Input Saya (30 Hari)', '<div class="h-80"><canvas id="chartGuruTrend"></canvas></div>')}
+        ${card('Status Entri Saya', '<div class="h-80 flex justify-center items-center"><canvas id="chartGuruStatus"></canvas></div>')}
+      </div>
+    `;
+
+    renderChart('chartGuruTrend', 'line', {
+        labels: Object.keys(trendData),
+        datasets: [{ label: 'Jumlah Input', data: Object.values(trendData), borderColor: 'var(--brand-primary)' }]
+    }, { scales: { x: { type: 'time', time: { unit: 'day' } } } });
+
+    const statusCounts = violationsByGuru.reduce((acc, v) => {
+        acc[v.status] = (acc[v.status] || 0) + 1;
+        return acc;
+    }, {});
+    renderChart('chartGuruStatus', 'pie', {
+        labels: Object.keys(statusCounts).map(s => s.replace(/_/g, ' ').toUpperCase()),
+        datasets: [{ data: Object.values(statusCounts), backgroundColor: ['#f59e0b', '#facc15', '#16a34a', '#dc2626', '#a855f7'] }]
+    });
+  }
+
+  async function renderSiswaDashboard(session) {
+    if (session.role !== 'siswa') {
+        viewArea.innerHTML = card('Akses Ditolak', '<p>Halaman ini hanya untuk siswa.</p>');
+        return;
+    }
+    const myNis = session.username; // Untuk siswa, username adalah NIS
+
+    const [allViolations, allApres] = await Promise.all([db.violations(), db.apres()]);
+
+    const myViolations = allViolations.filter(v => v.nis === myNis && v.status === VIOLATION_APPROVAL.APPROVED);
+    const totalPelanggaran = myViolations.reduce((sum, v) => sum + v.effPoin, 0);
+    const totalApresiasi = allApres.filter(a => a.nis === myNis && a.status === APPROVAL.APPROVED).reduce((sum, a) => sum + a.poin, 0);
+    const poinAkhir = Math.max(0, totalPelanggaran - totalApresiasi);
+
+    const dailyPoints = {};
+    for (let i = 29; i >= 0; i--) {
+        const d = new Date(); d.setDate(d.getDate() - i);
+        dailyPoints[d.toISOString().split('T')[0]] = 0;
+    }
+    myViolations.forEach(v => {
+        const key = v.at.toDate().toISOString().split('T')[0];
+        if(dailyPoints[key] !== undefined) dailyPoints[key] += v.effPoin;
+    });
+
+    viewArea.innerHTML = `
+      <div class="panel text-center">
+          <div class="text-slate-500 text-sm">Poin Akhir Anda</div>
+          <div class="text-6xl font-bold ${poinAkhir > 0 ? 'text-red-600' : 'text-green-600'} mt-2">${poinAkhir}</div>
+          <div class="text-xs text-slate-400 mt-1">(${totalPelanggaran} Pelanggaran - ${totalApresiasi} Apresiasi)</div>
+      </div>
+      <div class="grid grid-cols-1 gap-6">
+        ${card('Akumulasi Poin Pelanggaran Saya (30 Hari)', '<div class="h-80"><canvas id="chartSiswaTrend"></canvas></div>')}
+      </div>
+    `;
+
+    renderChart('chartSiswaTrend', 'line', {
+        labels: Object.keys(dailyPoints),
+        datasets: [{ label: 'Poin Diterima', data: Object.values(dailyPoints), borderColor: 'var(--danger)', backgroundColor: 'rgba(220, 38, 38, 0.1)', fill: true }]
+    }, { scales: { x: { type: 'time', time: { unit: 'day' } } } });
+  }
+
+  function renderChart(canvasId, type, data, options = {}) {
+    const ctx = document.getElementById(canvasId);
+    if (!ctx) return;
+    const defaultOptions = {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          position: 'top',
+        },
+      },
+    };
+    const chart = new Chart(ctx.getContext('2d'), {
+      type: type,
+      data: data,
+      options: { ...defaultOptions, ...options },
+    });
+    window.activeCharts.push(chart);
+  }
+
+  // ==================================================
+  // PLACEHOLDER & NEW MODULES
+  // ==================================================
+  function renderKasus() {
+      if(!requireRole(['admin_super', 'admin_operasional', 'wali'])) return;
+      viewArea.innerHTML = card('Kasus & Tindak Lanjut', `
+          <div class="text-center py-12 border-2 border-dashed rounded-xl text-slate-500 bg-slate-50">
+              <div class="inline-block p-4 bg-slate-200 rounded-full mb-4 text-2xl">${iconHTML('kasus')}</div>
+              <h3 class="font-semibold text-lg text-slate-800 mb-1">Segera Hadir</h3>
+              <p class="text-sm mb-4">Fitur untuk manajemen kasus, surat peringatan, dan log tindak lanjut sedang dalam pengembangan.</p>
+          </div>
+      `);
+  }
+
+  async function renderLeaderboard() {
+      if(!requireRole(['siswa'])) return;
+      const [allSiswa, allApres] = await Promise.all([db.siswa(), db.apres()]);
+      const approvedApres = allApres.filter(a => a.status === APPROVAL.APPROVED);
+
+      const poinSiswa = allSiswa.map(s => {
+          const totalPoin = approvedApres
+              .filter(a => a.nis === s.nis)
+              .reduce((sum, a) => sum + a.poin, 0);
+          return { ...s, poinApresiasi: totalPoin };
+      });
+
+      const top10 = poinSiswa.sort((a, b) => b.poinApresiasi - a.poinApresiasi).slice(0, 10);
+
+      const tableBody = top10.map((s, index) => `
+          <tr class="hover:bg-slate-200/30 transition-colors">
+              <td class="px-4 py-3 font-bold text-lg">${index + 1}</td>
+              <td class="px-4 py-3 font-medium text-slate-900">${s.nama}</td>
+              <td class="px-4 py-3">${s.kelas}</td>
+              <td class="px-4 py-3 font-bold text-green-600">${s.poinApresiasi} Poin</td>
+          </tr>
+      `).join('');
+
+      viewArea.innerHTML = card('🏆 Leaderboard Apresiasi', table(['Peringkat', 'Nama Siswa', 'Kelas', 'Total Poin'], tableBody));
+  }
+
+
+  // ==================================================
+  // ADVANCED CRUD SECTION
+  // ==================================================
+
+  // --- USERS CRUD ---
+  async function renderUsers(){
+    if(!requireRole(['admin_super', 'admin_operasional'])) return;
+    const items = (await db.users()).filter(u => u.role !== 'siswa'); // MODIFIED: Filter out student roles
+    const allKelas = await db.kelas();
+
+    const tableBody = items.map(u=> {
+      let infoTambahan = '-';
+      if (u.role === 'wali') {
+          const assignedClasses = allKelas.filter(k => k.waliId === u.id).map(k => k.nama);
+          infoTambahan = assignedClasses.length > 0 ? `<b>${assignedClasses.join(', ')}</b>` : '<i class="text-slate-500">Belum ada kelas</i>';
+      }
+      return `
+      <tr class="hover:bg-slate-200/30 transition-colors">
+        <td class="px-4 py-3"><input type="checkbox" name="bulkUserId" value="${u.id}" class="rounded border-slate-300" ${u.username === 'admin' ? 'disabled' : ''}></td>
+        <td class="px-4 py-3 font-medium text-slate-900">${u.nama}</td>
+        <td class="px-4 py-3">${u.username}</td>
+        <td class="px-4 py-3">${badge(u.role,'blue')}</td>
+        <td class="px-4 py-3">${infoTambahan}</td>
+        <td class="px-4 py-3">${u.active!==false? badge('Aktif','green'): badge('Nonaktif','red')}</td>
+        <td class="px-4 py-3 space-x-3">
+          <button class="font-medium text-blue-600 hover:underline" onclick="editUser('${u.id}')">Edit</button>
+          ${u.username==='admin' ? '' : `<button class="font-medium text-red-600 hover:underline" onclick="delUser('${u.id}')">Hapus</button>`}
+        </td>
+      </tr>`}).join('');
+    
+    const actions = `
+      <div class="flex items-center gap-2">
+        <button onclick="deactivateSelectedUsers()" class="clay-btn clay-sm flex items-center gap-2">${iconHTML('ban')} Nonaktifkan</button>
+        <button onclick="exportUsersToCSV()" class="clay-btn clay-sm flex items-center gap-2">${iconHTML('download')} Export</button>
+        <button onclick="addUser()" class="clay-btn clay-sm clay-btn-primary flex items-center gap-2">${iconHTML('plus')} Tambah User</button>
+      </div>
+    `;
+    const tableHead = `
+      <th class="px-4 py-3"><input type="checkbox" onchange="toggleAllCheckboxes(this, 'bulkUserId')" class="rounded border-slate-300"></th>
+      <th>Nama</th><th>Username</th><th>Role</th><th>Kelas Diampu</th><th>Status</th><th>Aksi</th>
+    `;
+    viewArea.innerHTML = card('Kelola User', table(tableHead.split('</th><th>').map(h => h.replace(/<th>|/g, '')), tableBody), actions);
+  }
+
+  window.toggleAllCheckboxes = (master, name) => {
+    document.querySelectorAll(`input[name="${name}"]`).forEach(cb => {
+      if (!cb.disabled) cb.checked = master.checked;
+    });
+  }
+
+  async function deactivateSelectedUsers() {
+    if(!requireRole(['admin_super', 'admin_operasional'])) return;
+    const selectedIds = [...document.querySelectorAll('input[name="bulkUserId"]:checked')].map(cb => cb.value);
+    if (selectedIds.length === 0) {
+      return showToast('Pilih user terlebih dahulu.', 'info');
+    }
+    const result = await showConfirm('Nonaktifkan User?', `Anda akan menonaktifkan ${selectedIds.length} user terpilih.`);
+    if (result.isConfirmed) {
+        const batch = firestore.batch();
+        selectedIds.forEach(id => {
+            const docRef = firestore.collection(DB_KEYS.USERS).doc(id);
+            batch.update(docRef, { active: false });
+        });
+        await batch.commit();
+        logAction('BULK_DEACTIVATE_USERS', { count: selectedIds.length });
+        showToast(`${selectedIds.length} user berhasil dinonaktifkan.`);
+        route('manajemen-user');
+    }
+  }
+
+  async function exportUsersToCSV() {
+    if(!requireRole(['admin_super', 'admin_operasional'])) return;
+    const users = (await db.users()).filter(u => u.role !== 'siswa'); // MODIFIED: Exclude students from export
+    const headers = ['id', 'username', 'nama', 'role', 'active'];
+    let csvContent = "data:text/csv;charset=utf-8," + headers.join(",") + "\n";
+    
+    users.forEach(user => {
+      const row = headers.map(header => {
+        let val = user[header];
+        if (typeof val === 'string' && val.includes(',')) {
+          val = `"${val}"`;
+        }
+        return val;
+      });
+      csvContent += row.join(",") + "\n";
+    });
+
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", "daftar_user.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    logAction('EXPORT_USERS_CSV');
+  }
+
+  function getUserFormHTML(user = {}) {
+    return `
+      <form id="userForm" class="space-y-4">
+        <input type="hidden" name="id" value="${user.id || ''}">
+        <div>
+          <label class="block text-sm font-medium mb-1 text-slate-700">Nama Lengkap</label>
+          <input required name="nama" value="${user.nama || ''}" placeholder="Nama" class="clay-input">
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-1 text-slate-700">Username</label>
+          <input required name="username" value="${user.username || ''}" placeholder="Username" class="clay-input">
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-1 text-slate-700">Password</label>
+          <input name="password" type="password" placeholder="${user.id ? 'Kosongkan jika tidak diubah' : 'Min. 8 karakter'}" class="clay-input" ${!user.id ? 'required' : ''}>
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-1 text-slate-700">Role</label>
+          <select required name="role" class="clay-input">
+            <option value="guru" ${user.role === 'guru' ? 'selected' : ''}>Guru</option>
+            <option value="wali" ${user.role === 'wali' ? 'selected' : ''}>Wali</option>
+            <option value="admin_operasional" ${user.role === 'admin_operasional' ? 'selected' : ''}>Admin Operasional</option>
+            <option value="admin_super" ${user.role === 'admin_super' ? 'selected' : ''}>Super Admin</option>
+          </select>
+        </div>
+        ${user.id ? `
+        <div>
+          <label class="block text-sm font-medium mb-1 text-slate-700">Status Akun</label>
+          <select name="active" class="clay-input">
+            <option value="true" ${user.active !== false ? 'selected' : ''}>Aktif</option>
+            <option value="false" ${user.active === false ? 'selected' : ''}>Nonaktif</option>
+          </select>
+        </div>` : ''}
+        <div class="pt-4 mt-4">
+          <button type="submit" class="w-full clay-btn clay-btn-primary">Simpan</button>
+        </div>
+      </form>
+    `;
+  }
+
+  function addUser() {
+    if(!requireRole(['admin_super', 'admin_operasional'])) return;
+    const formHTML = getUserFormHTML();
+    showModal('Tambah User Baru', formHTML, async (formData, button) => {
+      const obj = Object.fromEntries(formData.entries());
+      
+      if (obj.role === 'siswa') { // MODIFIED: Prevent creating student users
+          hideLoading(button);
+          return showToast('Peran siswa tidak dapat dibuat dari menu ini.', 'error');
+      }
+      const userQuery = await firestore.collection(DB_KEYS.USERS).where('username', '==', obj.username).get();
+      if (!userQuery.empty) {
+        hideLoading(button);
+        return showToast('Username sudah digunakan.', 'error');
+      }
+      if (obj.password.length < 8) {
+        hideLoading(button);
+        return showToast('Password minimal harus 8 karakter.', 'error');
+      }
+
+      const newUser = {
+          nama: obj.nama,
+          username: obj.username,
+          password: obj.password,
+          role: obj.role,
+          active: true,
+          createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      };
+      
+      await db.addDoc(DB_KEYS.USERS, newUser);
+      logAction('CREATE_USER', { username: obj.username, role: obj.role });
+      
+      hideModal();
+      showToast('User baru berhasil ditambahkan!');
+      route('manajemen-user');
+    });
+  }
+
+  async function editUser(id) {
+    if(!requireRole(['admin_super', 'admin_operasional'])) return;
+    const user = await db.getDoc(DB_KEYS.USERS, id);
+    if (!user) return showToast('User tidak ditemukan', 'error');
+
+    const formHTML = getUserFormHTML(user);
+    showModal(`Edit User: ${user.nama}`, formHTML, async (formData, button) => {
+      const updatedData = Object.fromEntries(formData.entries());
+      
+      if (updatedData.role === 'siswa') { // MODIFIED: Prevent changing role to student
+          hideLoading(button);
+          return showToast('Tidak dapat mengubah peran menjadi siswa.', 'error');
+      }
+      const userQuery = await firestore.collection(DB_KEYS.USERS).where('username', '==', updatedData.username).get();
+      if (!userQuery.empty && userQuery.docs[0].id !== id) {
+        hideLoading(button);
+        return showToast('Username sudah digunakan oleh user lain.', 'error');
+      }
+      if (updatedData.password && updatedData.password.length < 8) {
+        hideLoading(button);
+        return showToast('Password baru minimal harus 8 karakter.', 'error');
+      }
+
+      const dataToUpdate = {
+          nama: updatedData.nama,
+          username: updatedData.username,
+          role: updatedData.role,
+          active: updatedData.active === 'true'
+      };
+      if (updatedData.password) {
+          dataToUpdate.password = updatedData.password;
+      }
+
+      await db.updateDoc(DB_KEYS.USERS, id, dataToUpdate);
+      logAction('UPDATE_USER', { userId: id, new: dataToUpdate });
+      
+      hideModal();
+      showToast('Data user berhasil diperbarui!');
+      route('manajemen-user');
+    });
+  }
+
+  async function delUser(id) {
+    if(!requireRole(['admin_super'])) return;
+    const userToDelete = await db.getDoc(DB_KEYS.USERS, id);
+    if (!userToDelete) return showToast('User tidak ditemukan', 'error');
+
+    const result = await showConfirm('Hapus User?', `Anda akan menghapus user "${userToDelete.nama}".`);
+    if (result.isConfirmed) {
+      await db.deleteDoc(DB_KEYS.USERS, id);
+      logAction('DELETE_USER', { userId: id, username: userToDelete.username });
+      showToast('User berhasil dihapus.');
+      route('manajemen-user');
+    }
+  }
+  
+  // --- KELAS CRUD ---
+  async function renderKelas() {
+    if(!requireRole(['admin_super', 'admin_operasional'])) return;
+
+    const [kelasList, users, siswa] = await Promise.all([db.kelas(), db.users(), db.siswa()]);
+
+    const tableBody = kelasList.map(k => {
+        const wali = users.find(u => u.id === k.waliId);
+        const studentCount = siswa.filter(s => s.kelas === k.nama).length;
+        return `
+            <tr class="hover:bg-slate-200/30 transition-colors">
+                <td class="px-4 py-3 font-medium text-slate-900">${k.nama}</td>
+                <td class="px-4 py-3">${wali ? wali.nama : '<span class="text-slate-500">Belum diatur</span>'}</td>
+                <td class="px-4 py-3">${studentCount}</td>
+                <td class="px-4 py-3 space-x-3">
+                    <button class="font-medium text-blue-600 hover:underline" onclick="editKelas('${k.id}')">Edit</button>
+                    <button class="font-medium text-red-600 hover:underline" onclick="delKelas('${k.id}')">Hapus</button>
+                </td>
+            </tr>
+        `;
+    }).join('');
+
+    const actions = `
+        <div class="flex items-center gap-2">
+            <button onclick="showTahunAjaranTools()" class="clay-btn clay-sm flex items-center gap-2"><i class="bx bx-calendar-event"></i> Alat Tahun Ajaran</button>
+            <button onclick="addKelas()" class="clay-btn clay-sm clay-btn-primary flex items-center gap-2">${iconHTML('plus')} Tambah Kelas</button>
+        </div>
+    `;
+    viewArea.innerHTML = card('Kelola Kelas', table(['Nama Kelas', 'Wali Kelas', 'Jumlah Siswa', 'Aksi'], tableBody), actions);
+  }
+
+  async function getKelasFormHTML(kelas = {}) {
+    const [allUsers, allKelas] = await Promise.all([db.users(), db.kelas()]);
+    
+    const assignedWaliIds = new Set(allKelas.filter(k => k.id !== kelas.id).map(k => k.waliId));
+    const availableWalis = allUsers.filter(u => u.role === 'wali' && !assignedWaliIds.has(u.id));
+
+    if (kelas.waliId) {
+        const currentWali = allUsers.find(u => u.id === kelas.waliId);
+        if (currentWali && !availableWalis.some(w => w.id === currentWali.id)) {
+            availableWalis.unshift(currentWali);
+        }
+    }
+
+    const waliOptions = availableWalis.map(w =>
+        `<option value="${w.id}" ${kelas.waliId === w.id ? 'selected' : ''}>${w.nama}</option>`
+    ).join('');
+
+    return `
+        <form id="kelasForm" class="space-y-4">
+            <input type="hidden" name="id" value="${kelas.id || ''}">
+            <div>
+                <label class="block text-sm font-medium mb-1 text-slate-700">Nama Kelas</label>
+                <input required name="nama" value="${kelas.nama || ''}" placeholder="Contoh: XII TKJ 2" class="clay-input">
+            </div>
+            <div>
+                <label class="block text-sm font-medium mb-1 text-slate-700">Wali Kelas</label>
+                <select name="waliId" class="clay-input">
+                    <option value="">-- Tidak Ada Wali Kelas --</option>
+                    ${waliOptions}
+                </select>
+            </div>
+            <div class="pt-4 mt-4">
+                <button type="submit" class="w-full clay-btn clay-btn-primary">Simpan</button>
+            </div>
+        </form>
+    `;
+  }
+
+  async function addKelas() {
+    if(!requireRole(['admin_super', 'admin_operasional'])) return;
+    const formHTML = await getKelasFormHTML();
+    showModal('Tambah Kelas Baru', formHTML, async (formData, button) => {
+        const obj = Object.fromEntries(formData.entries());
+        const kelasQuery = await firestore.collection(DB_KEYS.KELAS).where('nama', '==', obj.nama.trim()).get();
+
+        if (!kelasQuery.empty) {
+            hideLoading(button);
+            return showToast('Nama kelas sudah ada.', 'error');
+        }
+
+        const newKelas = {
+            nama: obj.nama.trim(),
+            waliId: obj.waliId || null
+        };
+        
+        await db.addDoc(DB_KEYS.KELAS, newKelas);
+        logAction('CREATE_KELAS', { nama: newKelas.nama, waliId: newKelas.waliId });
+        
+        hideModal();
+        showToast('Kelas baru berhasil ditambahkan.');
+        route('manajemen-kelas');
+    });
+  }
+
+  async function editKelas(id) {
+    if(!requireRole(['admin_super', 'admin_operasional'])) return;
+    const kelas = await db.getDoc(DB_KEYS.KELAS, id);
+    if (!kelas) return showToast('Kelas tidak ditemukan', 'error');
+
+    const formHTML = await getKelasFormHTML(kelas);
+    showModal(`Edit Kelas: ${kelas.nama}`, formHTML, async (formData, button) => {
+        const updatedData = Object.fromEntries(formData.entries());
+        const kelasQuery = await firestore.collection(DB_KEYS.KELAS).where('nama', '==', updatedData.nama.trim()).get();
+        
+        if (!kelasQuery.empty && kelasQuery.docs[0].id !== id) {
+            hideLoading(button);
+            return showToast('Nama kelas sudah digunakan.', 'error');
+        }
+
+        const dataToUpdate = {
+            nama: updatedData.nama.trim(),
+            waliId: updatedData.waliId || null
+        };
+        
+        await db.updateDoc(DB_KEYS.KELAS, id, dataToUpdate);
+        logAction('UPDATE_KELAS', { kelasId: id, new: dataToUpdate });
+
+        hideModal();
+        showToast('Data kelas berhasil diperbarui.');
+        route('manajemen-kelas');
+    });
+  }
+
+  async function delKelas(id) {
+    if(!requireRole(['admin_super'])) return;
+    const kelasToDelete = await db.getDoc(DB_KEYS.KELAS, id);
+    if (!kelasToDelete) return showToast('Kelas tidak ditemukan', 'error');
+
+    const studentQuery = await firestore.collection(DB_KEYS.SISWA).where('kelas', '==', kelasToDelete.nama).get();
+    if (!studentQuery.empty) {
+        return Swal.fire('Gagal Menghapus', `Kelas "${kelasToDelete.nama}" tidak dapat dihapus karena masih memiliki ${studentQuery.size} siswa. Pindahkan siswa ke kelas lain terlebih dahulu.`, 'error');
+    }
+
+    const result = await showConfirm('Hapus Kelas?', `Anda akan menghapus kelas "${kelasToDelete.nama}". Aksi ini tidak dapat dibatalkan.`);
+    if (result.isConfirmed) {
+        await db.deleteDoc(DB_KEYS.KELAS, id);
+        logAction('DELETE_KELAS', { kelasId: id, nama: kelasToDelete.nama });
+        showToast('Kelas berhasil dihapus.');
+        route('manajemen-kelas');
+    }
+  }
+
+  // --- TAHUN AJARAN TOOLS ---
+  function showTahunAjaranTools() {
+    if(!requireRole(['admin_super'])) return;
+    const bodyHTML = `
+        <div class="space-y-4">
+            <div>
+                <h4 class="font-semibold text-slate-800">Kenaikan Kelas</h4>
+                <p class="text-sm text-slate-600 mb-2">Pindahkan semua siswa dari satu tingkat ke tingkat berikutnya. Contoh: semua siswa kelas 'X' akan menjadi 'XI'.</p>
+                <button onclick="promoteClasses()" class="clay-btn clay-sm w-full">Jalankan Kenaikan Kelas Massal</button>
+            </div>
+            <hr/>
+            <div>
+                <h4 class="font-semibold text-slate-800">Kelulusan Siswa</h4>
+                <p class="text-sm text-slate-600 mb-2">Nonaktifkan semua siswa di tingkat akhir (misal: kelas XII) dan tandai sebagai 'Lulus'.</p>
+                 <select id="graduateLevel" class="clay-input mb-2 text-sm">
+                    <option value="XII">Luluskan Tingkat XII</option>
+                    <option value="XI">Luluskan Tingkat XI</option>
+                    <option value="X">Luluskan Tingkat X</option>
+                </select>
+                <button onclick="graduateStudents()" class="clay-btn clay-sm w-full">Jalankan Kelulusan Massal</button>
+            </div>
+             <hr/>
+            <div>
+                <h4 class="font-semibold text-slate-800">Reset Poin</h4>
+                <p class="text-sm text-slate-600 mb-2">Arsipkan dan reset semua poin pelanggaran & apresiasi siswa aktif untuk memulai tahun ajaran baru.</p>
+                <button onclick="resetAllPoints()" class="clay-btn clay-sm w-full text-red-600">Mulai Tahun Ajaran Baru & Reset Poin</button>
+            </div>
+        </div>
+    `;
+    showModal('Alat Manajemen Tahun Ajaran', bodyHTML, null, '2xl');
+  }
+
+  async function promoteClasses() {
+      const result = await showConfirm('Naikkan Kelas Semua Siswa?', 'Aksi ini akan mengubah kelas semua siswa. Contoh: X RPL 1 -> XI RPL 1, XI TKJ -> XII TKJ. Kelas XII tidak akan berubah. Lanjutkan?');
+      if (!result.isConfirmed) return;
+
+      const allSiswa = await db.siswa();
+      const batch = firestore.batch();
+      let changedCount = 0;
+      allSiswa.forEach(s => {
+          if (s.active !== false) { // Hanya siswa aktif
+              let newClass = s.kelas;
+              if (s.kelas.startsWith('X-')) newClass = s.kelas.replace('X-', 'XI-');
+              else if (s.kelas.startsWith('XI-')) newClass = s.kelas.replace('XI-', 'XII-');
+              else if (s.kelas.startsWith('X ')) newClass = s.kelas.replace('X ', 'XI ');
+              else if (s.kelas.startsWith('XI ')) newClass = s.kelas.replace('XI ', 'XII ');
+
+              if (newClass !== s.kelas) {
+                  const docRef = firestore.collection(DB_KEYS.SISWA).doc(s.id);
+                  const newHistory = s.riwayatKelas || [];
+                  newHistory.push({ kelas: newClass, tanggal: new Date().toISOString() });
+                  batch.update(docRef, { kelas: newClass, riwayatKelas: newHistory });
+                  changedCount++;
+              }
+          }
+      });
+      await batch.commit();
+      logAction('PROMOTE_CLASSES', { count: changedCount });
+      showToast(`${changedCount} siswa berhasil dinaikkan kelasnya.`);
+      hideModal();
+      route('manajemen-siswa');
+  }
+
+  async function graduateStudents() {
+      const level = document.getElementById('graduateLevel').value;
+      const result = await showConfirm(`Luluskan Semua Siswa Tingkat ${level}?`, `Siswa di tingkat ${level} akan ditandai sebagai 'Lulus' dan akunnya dinonaktifkan. Aksi ini tidak dapat dibatalkan.`);
+      if (!result.isConfirmed) return;
+
+      const siswaQuery = await firestore.collection(DB_KEYS.SISWA).where('kelas', '>=', level).where('kelas', '<', `${level}\uffff`).get();
+      const batch = firestore.batch();
+      let changedCount = 0;
+      siswaQuery.docs.forEach(doc => {
+          batch.update(doc.ref, { active: false, status: 'Lulus' });
+          changedCount++;
+      });
+      await batch.commit();
+      logAction('GRADUATE_STUDENTS', { count: changedCount, level });
+      showToast(`${changedCount} siswa tingkat ${level} telah diluluskan.`);
+      hideModal();
+      route('manajemen-siswa');
+  }
+
+  async function resetAllPoints() {
+      const result = await showConfirm('Reset Semua Poin Siswa?', 'Ini akan mengarsipkan semua catatan pelanggaran dan apresiasi saat ini. Poin semua siswa akan kembali ke 0. Aksi ini idealnya dilakukan saat awal tahun ajaran baru.');
+      if (!result.isConfirmed) return;
+
+      const year = new Date().getFullYear();
+      const [violations, apres] = await Promise.all([db.violations(), db.apres()]);
+      const batch = firestore.batch();
+
+      violations.forEach(v => {
+          const docRef = firestore.collection(DB_KEYS.VIOLATIONS).doc(v.id);
+          batch.update(docRef, { archivedIn: year });
+      });
+      apres.forEach(a => {
+          const docRef = firestore.collection(DB_KEYS.APRES).doc(a.id);
+          batch.update(docRef, { archivedIn: year });
+      });
+      
+      await batch.commit();
+      logAction('RESET_ALL_POINTS');
+      Swal.fire('Berhasil!', 'Semua poin telah diarsipkan. Aplikasi siap untuk tahun ajaran baru.', 'success');
+      hideModal();
+      route('dashboard');
+  }
+
+
+  // --- SISWA CRUD ---
+  async function renderSiswa(){
+    if(!requireRole(['admin_super', 'admin_operasional'])) return;
+    const items = (await db.siswa()).filter(s => s.active !== false); // Hanya tampilkan siswa aktif
+    const tableBody = items.map(s=>`
+      <tr class="hover:bg-slate-200/30 transition-colors">
+        <td class="px-4 py-3 font-medium text-slate-900">${s.nis}</td>
+        <td class="px-4 py-3">${s.nama}</td>
+        <td class="px-4 py-3">${s.kelas}</td>
+        <td class="px-4 py-3">${s.wali||'-'}</td>
+        <td class="px-4 py-3">${s.gender||'-'}</td>
+        <td class="px-4 py-3 space-x-3">
+          <button class="font-medium text-blue-600 hover:underline" onclick="editSiswa('${s.id}')">Edit</button>
+          <button class="font-medium text-red-600 hover:underline" onclick="delSiswa('${s.id}')">Hapus</button>
+        </td>
+      </tr>`).join('');
+    
+    const actions = `
+      <div class="flex items-center gap-2">
+        <button onclick="importSiswaFromCSV()" class="clay-btn clay-sm flex items-center gap-2">${iconHTML('upload')} Import CSV</button>
+        <button onclick="addSiswa()" class="clay-btn clay-sm clay-btn-primary flex items-center gap-2">${iconHTML('plus')} Tambah Siswa</button>
+      </div>
+    `;
+    viewArea.innerHTML = card('Kelola Siswa Aktif', table(['NIS','Nama','Kelas','Wali Murid','Gender','Aksi'], tableBody), actions);
+  }
+
+  async function getSiswaFormHTML(siswa = {}) {
+    const kelasOptions = (await db.kelas()).map(k =>
+        `<option value="${k.nama}" ${siswa.kelas === k.nama ? 'selected' : ''}>${k.nama}</option>`
+    ).join('');
+    return `
+      <form id="siswaForm" class="space-y-4">
+        <input type="hidden" name="id" value="${siswa.id || ''}">
+        <div>
+          <label class="block text-sm font-medium mb-1 text-slate-700">NIS</label>
+          <input required name="nis" value="${siswa.nis || ''}" placeholder="Nomor Induk Siswa" class="clay-input">
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-1 text-slate-700">Nama Siswa</label>
+          <input required name="nama" value="${siswa.nama || ''}" placeholder="Nama Lengkap Siswa" class="clay-input">
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-1 text-slate-700">Kelas</label>
+          <select required name="kelas" class="clay-input">
+            <option value="">-- Pilih Kelas --</option>
+            ${kelasOptions}
+          </select>
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-1 text-slate-700">Wali Murid (Opsional)</label>
+          <input name="wali" value="${siswa.wali || ''}" placeholder="Nama Wali Murid" class="clay-input">
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-1 text-slate-700">Gender</label>
+          <select name="gender" class="clay-input">
+            <option value="L" ${siswa.gender === 'L' ? 'selected' : ''}>Laki-laki</option>
+            <option value="P" ${siswa.gender === 'P' ? 'selected' : ''}>Perempuan</option>
+          </select>
+        </div>
+        <div class="pt-4 mt-4">
+          <button type="submit" class="w-full clay-btn clay-btn-primary">Simpan</button>
+        </div>
+      </form>
+    `;
+  }
+
+  async function addSiswa() {
+    if(!requireRole(['admin_super', 'admin_operasional'])) return;
+    const allKelas = await db.kelas();
+    if (allKelas.length === 0) {
+        return showToast('Tambahkan data kelas terlebih dahulu di menu "Kelola Kelas".', 'error');
+    }
+    const formHTML = await getSiswaFormHTML();
+    showModal('Tambah Siswa Baru', formHTML, async (formData, button) => {
+      const obj = Object.fromEntries(formData.entries());
+      const siswaQuery = await firestore.collection(DB_KEYS.SISWA).where('nis', '==', obj.nis).get();
+      if(!siswaQuery.empty) {
+        hideLoading(button);
+        return showToast('NIS sudah ada.', 'error');
+      }
+      
+      const newSiswa = {
+          nis: obj.nis,
+          nama: obj.nama,
+          kelas: obj.kelas,
+          wali: obj.wali,
+          gender: obj.gender,
+          createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+          active: true,
+          riwayatKelas: [{ kelas: obj.kelas, tanggal: new Date().toISOString() }]
+      };
+      await db.addDoc(DB_KEYS.SISWA, newSiswa);
+      logAction('CREATE_SISWA', { nis: obj.nis, nama: obj.nama });
+      
+      hideModal();
+      showToast('Siswa baru berhasil ditambahkan!');
+      route('manajemen-siswa');
+    });
+  }
+
+  async function editSiswa(id) {
+    if(!requireRole(['admin_super', 'admin_operasional'])) return;
+    const siswa = await db.getDoc(DB_KEYS.SISWA, id);
+    if (!siswa) return showToast('Siswa tidak ditemukan', 'error');
+
+    const formHTML = await getSiswaFormHTML(siswa);
+    showModal(`Edit Siswa: ${siswa.nama}`, formHTML, async (formData, button) => {
+      const updatedData = Object.fromEntries(formData.entries());
+      const oldData = {...siswa};
+
+      const dataToUpdate = {
+          nis: updatedData.nis,
+          nama: updatedData.nama,
+          kelas: updatedData.kelas,
+          wali: updatedData.wali,
+          gender: updatedData.gender
+      };
+
+      if (oldData.kelas !== updatedData.kelas) {
+        const newHistory = oldData.riwayatKelas || [];
+        newHistory.push({ kelas: updatedData.kelas, tanggal: new Date().toISOString() });
+        dataToUpdate.riwayatKelas = newHistory;
+      }
+      
+      await db.updateDoc(DB_KEYS.SISWA, id, dataToUpdate);
+      logAction('UPDATE_SISWA', { siswaId: id, old: oldData, new: dataToUpdate });
+      
+      hideModal();
+      showToast('Data siswa berhasil diperbarui!');
+      route('manajemen-siswa');
+    });
+  }
+
+  async function delSiswa(id) {
+    if(!requireRole(['admin_super'])) return;
+    const siswaToDelete = await db.getDoc(DB_KEYS.SISWA, id);
+    if (!siswaToDelete) return showToast('Siswa tidak ditemukan', 'error');
+
+    const result = await showConfirm('Hapus Siswa?', `Anda akan menghapus siswa "${siswaToDelete.nama}".`);
+    if (result.isConfirmed) {
+      await db.deleteDoc(DB_KEYS.SISWA, id);
+      logAction('DELETE_SISWA', { siswaId: id, nis: siswaToDelete.nis, nama: siswaToDelete.nama });
+      showToast('Siswa berhasil dihapus.');
+      route('manajemen-siswa');
+    }
+  }
+
+  // --- CSV IMPORT LOGIC ---
+  function importSiswaFromCSV() {
+    if(!requireRole(['admin_super', 'admin_operasional'])) return;
+    const modalHTML = `
+      <div id="csv-step-1">
+        <p class="text-sm text-slate-600 mb-2">Unggah file CSV dengan kolom: <kbd>NIS</kbd>, <kbd>nama</kbd>, <kbd>kelas</kbd>, <kbd>gender</kbd>, <kbd>wali</kbd>. Baris pertama harus header.</p>
+        <input type="file" id="csvFileInput" accept=".csv" class="w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
+      </div>
+      <div id="csv-step-2" class="hidden">
+        <p class="text-sm text-slate-600 mb-2">Pratinjau data. Baris yang ditandai tidak akan diimpor.</p>
+        <div class="max-h-64 overflow-y-auto border rounded-lg">
+          <table class="min-w-full text-xs preview-table">
+            <thead class="bg-slate-50 sticky top-0"><tr>
+              <th class="p-2 text-left">NIS</th><th class="p-2 text-left">Nama</th><th class="p-2 text-left">Kelas</th><th class="p-2 text-left">Status</th>
+            </tr></thead>
+            <tbody id="csvPreviewBody"></tbody>
+          </table>
+        </div>
+        <div class="mt-3 text-xs flex flex-wrap gap-x-4 gap-y-1">
+          <span class="flex items-center gap-1.5"><span class="w-3 h-3 bg-red-100 rounded-full"></span> Duplikat</span>
+          <span class="flex items-center gap-1.5"><span class="w-3 h-3 bg-yellow-100 rounded-full"></span> Tidak Lengkap</span>
+        </div>
+        <div id="csvSummary" class="mt-3 text-sm font-medium"></div>
+        <div class="pt-4 border-t mt-4">
+          <button id="confirmImportBtn" class="w-full clay-btn clay-btn-primary">Impor Data Valid</button>
+        </div>
+      </div>
+    `;
+    showModal('Import Siswa dari CSV', modalHTML, null, '2xl');
+
+    document.getElementById('csvFileInput').addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = async (event) => {
+        const text = event.target.result;
+        await processCSV(text);
+      };
+      reader.readAsText(file);
+    });
+  }
+
+  async function processCSV(csvText) {
+    const existingSiswa = await db.siswa();
+    const existingNisSet = new Set(existingSiswa.map(s => s.nis));
+    const lines = csvText.split(/\r?\n/).filter(Boolean);
+    if (lines.length < 2) return showToast('File CSV kosong atau hanya berisi header.', 'error');
+
+    const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+    const requiredHeaders = ['nis', 'nama', 'kelas'];
+    if (!requiredHeaders.every(h => headers.includes(h))) {
+      return showToast(`Header CSV tidak valid. Harus ada: ${requiredHeaders.join(', ')}`, 'error');
+    }
+
+    const nisInFile = new Set();
+    let validCount = 0;
+    let duplicateCount = 0;
+    let invalidCount = 0;
+    
+    const dataToImport = [];
+    const previewHTML = lines.slice(1).map(line => {
+      const values = line.split(',');
+      const entry = headers.reduce((obj, header, index) => {
+        obj[header] = values[index] ? values[index].trim() : '';
+        return obj;
+      }, {});
+
+      let status = 'Valid';
+      let rowClass = '';
+      let isRowValid = true;
+
+      if (!entry.nis || !entry.nama || !entry.kelas) {
+        status = 'Data tidak lengkap';
+        rowClass = 'bg-yellow-100';
+        invalidCount++;
+        isRowValid = false;
+      } else if (existingNisSet.has(entry.nis) || nisInFile.has(entry.nis)) {
+        status = 'NIS Duplikat';
+        rowClass = 'bg-red-100';
+        duplicateCount++;
+        isRowValid = false;
+      }
+
+      if (isRowValid) {
+        validCount++;
+        nisInFile.add(entry.nis);
+        dataToImport.push(entry);
+      }
+
+      return `<tr class="${rowClass}">
+        <td class="p-2">${entry.nis}</td>
+        <td class="p-2">${entry.nama}</td>
+        <td class="p-2">${entry.kelas}</td>
+        <td class="p-2">${status}</td>
+      </tr>`;
+    }).join('');
+
+    document.getElementById('csv-step-1').classList.add('hidden');
+    document.getElementById('csv-step-2').classList.remove('hidden');
+    document.getElementById('csvPreviewBody').innerHTML = previewHTML;
+    document.getElementById('csvSummary').innerHTML = `
+      <span class="text-green-600">${validCount} data valid</span>, 
+      <span class="text-red-600">${duplicateCount} duplikat</span>, 
+      <span class="text-yellow-600">${invalidCount} tidak lengkap</span>.
+    `;
+
+    const confirmBtn = document.getElementById('confirmImportBtn');
+    if (validCount > 0) {
+      confirmBtn.disabled = false;
+      confirmBtn.onclick = async () => {
+        showLoading(confirmBtn);
+        const batch = firestore.batch();
+        dataToImport.forEach(item => {
+          const docRef = firestore.collection(DB_KEYS.SISWA).doc();
+          batch.set(docRef, {
+            nis: item.nis,
+            nama: item.nama,
+            kelas: item.kelas,
+            gender: item.gender || '',
+            wali: item.wali || '',
+            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+            active: true,
+            riwayatKelas: [{ kelas: item.kelas, tanggal: new Date().toISOString() }]
+          });
+        });
+        await batch.commit();
+        logAction('IMPORT_SISWA_CSV', { count: validCount });
+        hideModal();
+        showToast(`${validCount} siswa berhasil diimpor.`);
+        route('manajemen-siswa');
+      };
+    } else {
+      confirmBtn.disabled = true;
+    }
+  }
+
+  // --- KATEGORI & JENIS PELANGGARAN ---
+  async function renderKategori(container){
+    if(!requireRole(['admin_super', 'admin_operasional'])) return;
+    const items = await db.categories();
+    const body = items.map(c=>`
+        <tr class="hover:bg-slate-200/30 transition-colors">
+          <td class="px-4 py-3">${c.kode}</td><td class="px-4 py-3">${c.nama}</td>
+          <td class="px-4 py-3">${c.tipe === 'apresiasi' ? badge('Apresiasi', 'green') : badge('Pelanggaran', 'red')}</td>
+          <td class="px-4 py-3 space-x-3">
+            <button class="font-medium text-blue-600 hover:underline" onclick="editCat('${c.id}')">Edit</button>
+            <button class="font-medium text-red-600 hover:underline" onclick="delCat('${c.id}')">Hapus</button>
+          </td>
+        </tr>`).join('');
+    const actions = `<button onclick="addCat()" class="clay-btn clay-sm clay-btn-primary flex items-center gap-2">${iconHTML('plus')} Tambah Kategori</button>`;
+    container.innerHTML = card('Kelola Kategori', table(['Kode','Nama','Tipe','Aksi'], body), actions);
+  }
+  function getCatFormHTML(cat = {}) {
+    return `
+      <form class="space-y-4">
+        <div>
+          <label class="block text-sm font-medium mb-1 text-slate-700">Tipe Kategori</label>
+          <select name="tipe" class="clay-input">
+            <option value="pelanggaran" ${cat.tipe === 'pelanggaran' ? 'selected' : ''}>Pelanggaran</option>
+            <option value="apresiasi" ${cat.tipe === 'apresiasi' ? 'selected' : ''}>Apresiasi</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-1 text-slate-700">Kode Kategori</label>
+          <input required name="kode" value="${cat.kode || ''}" placeholder="mis. DIS atau PRE" class="clay-input">
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-1 text-slate-700">Nama Kategori</label>
+          <input required name="nama" value="${cat.nama || ''}" placeholder="mis. Disiplin atau Prestasi" class="clay-input">
+        </div>
+        <div class="pt-4 mt-4">
+          <button type="submit" class="w-full clay-btn clay-btn-primary">Simpan</button>
+        </div>
+      </form>
+    `;
+  }
+  function addCat() {
+    if(!requireRole(['admin_super', 'admin_operasional'])) return;
+    showModal('Tambah Kategori Baru', getCatFormHTML(), async (formData, button) => {
+      const obj = Object.fromEntries(formData.entries());
+      const catQuery = await firestore.collection(DB_KEYS.CATEGORIES).where('kode', '==', obj.kode).get();
+      if(!catQuery.empty) {
+        hideLoading(button);
+        return showToast('Kode kategori sudah ada.', 'error');
+      }
+      await db.addDoc(DB_KEYS.CATEGORIES, obj);
+      logAction('CREATE_CATEGORY', { ...obj });
+      hideModal();
+      showToast('Kategori berhasil ditambahkan!');
+      route('pengaturan');
+    });
+  }
+  async function editCat(id) {
+    if(!requireRole(['admin_super', 'admin_operasional'])) return;
+    const cat = await db.getDoc(DB_KEYS.CATEGORIES, id);
+    if (!cat) return showToast('Kategori tidak ditemukan', 'error');
+    showModal(`Edit Kategori: ${cat.nama}`, getCatFormHTML(cat), async (formData, button) => {
+      const updatedData = Object.fromEntries(formData.entries());
+      await db.updateDoc(DB_KEYS.CATEGORIES, id, updatedData);
+      logAction('UPDATE_CATEGORY', { categoryId: id, new: updatedData });
+      hideModal();
+      showToast('Kategori berhasil diperbarui!');
+      route('pengaturan');
+    });
+  }
+  async function delCat(id) {
+    if(!requireRole(['admin_super'])) return;
+    const catToDelete = await db.getDoc(DB_KEYS.CATEGORIES, id);
+    if (!catToDelete) return showToast('Kategori tidak ditemukan', 'error');
+    const result = await showConfirm('Hapus Kategori?', `Anda akan menghapus "${catToDelete.nama}". Ini juga akan mempengaruhi jenis pelanggaran/apresiasi yang terkait.`);
+    if (result.isConfirmed) {
+      await db.deleteDoc(DB_KEYS.CATEGORIES, id);
+      logAction('DELETE_CATEGORY', { categoryId: id, nama: catToDelete.nama });
+      showToast('Kategori berhasil dihapus.');
+      route('pengaturan');
+    }
+  }
+  async function renderTypes(container){
+    if(!requireRole(['admin_super', 'admin_operasional'])) return;
+    const [cats, items] = await Promise.all([db.categories(), db.types()]);
+    const body = items.map(t=>{
+        const c = cats.find(x=>x.id===t.categoryId);
+        const mode = t.enforcement_mode === 'warning' ? badge('Teguran Dulu', 'yellow') : badge('Langsung Poin', 'red');
+        return `
+        <tr class="hover:bg-slate-200/30 transition-colors">
+          <td class="px-4 py-3">${t.kode}</td><td class="px-4 py-3">${t.nama}</td>
+          <td class="px-4 py-3">${c? c.nama: '<span class="text-red-500">Tanpa Kategori</span>'}</td>
+          <td class="px-4 py-3 font-semibold text-red-600">${t.poin}</td>
+          <td class="px-4 py-3">${mode}</td>
+          <td class="px-4 py-3 space-x-3">
+            <button class="font-medium text-blue-600 hover:underline" onclick="editType('${t.id}')">Edit</button>
+            <button class="font-medium text-red-600 hover:underline" onclick="delType('${t.id}')">Hapus</button>
+          </td>
+        </tr>`}).join('');
+    const actions = `<button onclick="addType()" class="clay-btn clay-sm clay-btn-primary flex items-center gap-2">${iconHTML('plus')} Tambah Jenis</button>`;
+    container.innerHTML = card('Jenis Pelanggaran', table(['Kode','Nama','Kategori','Poin','Mode','Aksi'], body), actions);
+  }
+  async function getTypeFormHTML(type = {}) {
+    const cats = (await db.categories()).filter(c => c.tipe !== 'apresiasi');
+    return `
+      <form class="space-y-4">
+        <div>
+          <label class="block text-sm font-medium mb-1 text-slate-700">Kode Pelanggaran</label>
+          <input required name="kode" value="${type.kode || ''}" placeholder="mis. TRL" class="clay-input">
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-1 text-slate-700">Nama Pelanggaran</label>
+          <input required name="nama" value="${type.nama || ''}" placeholder="mis. Terlambat Masuk Sekolah" class="clay-input">
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-1 text-slate-700">Poin</label>
+          <input required name="poin" type="number" value="${type.poin || ''}" placeholder="mis. 5" class="clay-input">
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-1 text-slate-700">Kategori</label>
+          <select required name="categoryId" class="clay-input">
+            <option value="">-- Pilih Kategori --</option>
+            ${cats.map(c=>`<option value="${c.id}" ${type.categoryId === c.id ? 'selected' : ''}>${c.kode} — ${c.nama}</option>`).join('')}
+          </select>
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-1 text-slate-700">Mode Penindakan</label>
+          <select required name="enforcement_mode" class="clay-input">
+            <option value="direct" ${type.enforcement_mode === 'direct' ? 'selected' : ''}>Langsung Poin</option>
+            <option value="warning" ${type.enforcement_mode === 'warning' ? 'selected' : ''}>Teguran Dulu</option>
+          </select>
+        </div>
+        <div class="pt-4 mt-4">
+          <button type="submit" class="w-full clay-btn clay-btn-primary">Simpan</button>
+        </div>
+      </form>
+    `;
+  }
+  async function addType() {
+    if(!requireRole(['admin_super', 'admin_operasional'])) return;
+    const formHTML = await getTypeFormHTML();
+    showModal('Tambah Jenis Pelanggaran', formHTML, async (formData, button) => {
+      const obj = Object.fromEntries(formData.entries());
+      const typeQuery = await firestore.collection(DB_KEYS.PELANGGARAN_TYPES).where('kode', '==', obj.kode).get();
+      if(!typeQuery.empty) {
+        hideLoading(button);
+        return showToast('Kode sudah ada.', 'error');
+      }
+      if(!obj.categoryId) {
+        hideLoading(button);
+        return showToast('Pilih kategori terlebih dahulu.', 'error');
+      }
+      const newType = {
+          ...obj,
+          poin: Number(obj.poin || 0)
+      };
+      await db.addDoc(DB_KEYS.PELANGGARAN_TYPES, newType);
+      logAction('CREATE_TYPE', { kode: obj.kode, nama: obj.nama, poin: obj.poin, mode: obj.enforcement_mode });
+      hideModal();
+      showToast('Jenis pelanggaran berhasil ditambahkan!');
+      route('pengaturan');
+    });
+  }
+  async function editType(id) {
+    if(!requireRole(['admin_super', 'admin_operasional'])) return;
+    const type = await db.getDoc(DB_KEYS.PELANGGARAN_TYPES, id);
+    if (!type) return showToast('Jenis pelanggaran tidak ditemukan', 'error');
+    const formHTML = await getTypeFormHTML(type);
+    showModal(`Edit Jenis: ${type.nama}`, formHTML, async (formData, button) => {
+      const updatedData = Object.fromEntries(formData.entries());
+      const dataToUpdate = {
+          ...updatedData,
+          poin: Number(updatedData.poin)
+      };
+      await db.updateDoc(DB_KEYS.PELANGGARAN_TYPES, id, dataToUpdate);
+      logAction('UPDATE_TYPE', { typeId: id, new: dataToUpdate });
+      hideModal();
+      showToast('Jenis pelanggaran berhasil diperbarui!');
+      route('pengaturan');
+    });
+  }
+  async function delType(id) {
+    if(!requireRole(['admin_super'])) return;
+    const typeToDelete = await db.getDoc(DB_KEYS.PELANGGARAN_TYPES, id);
+    if (!typeToDelete) return showToast('Jenis pelanggaran tidak ditemukan', 'error');
+    const result = await showConfirm('Hapus Jenis Pelanggaran?', `Anda akan menghapus "${typeToDelete.nama}".`);
+    if (result.isConfirmed) {
+      await db.deleteDoc(DB_KEYS.PELANGGARAN_TYPES, id);
+      logAction('DELETE_TYPE', { typeId: id, nama: typeToDelete.nama });
+      showToast('Jenis pelanggaran berhasil dihapus.');
+      route('pengaturan');
+    }
+  }
+
+  // --- INPUT PELANGGARAN (WITH QR SCANNER) ---
+  async function renderInputCatatan(){
+    const ses = requireAuth();
+    if (!ses || !['guru', 'wali', 'admin_super', 'admin_operasional'].includes(ses.role)) return;
+
+    // This function will now be a shell that calls the specific renderers
+    viewArea.innerHTML = `
+        <div class="flex items-center gap-2 mb-4">
+            <button id="tab-pelanggaran" class="clay-btn clay-sm">Input Pelanggaran</button>
+            <button id="tab-apresiasi" class="clay-btn clay-sm">Input Apresiasi</button>
+        </div>
+        <div id="input-content"></div>
+    `;
+
+    const tabPelanggaran = document.getElementById('tab-pelanggaran');
+    const tabApresiasi = document.getElementById('tab-apresiasi');
+    const inputContent = document.getElementById('input-content');
+
+    const showPelanggaran = async () => {
+        tabPelanggaran.classList.add('clay-pressed', 'clay-btn-primary');
+        tabApresiasi.classList.remove('clay-pressed', 'clay-btn-primary');
+        await renderInputPelanggaran(inputContent);
+    };
+
+    const showApresiasi = async () => {
+        tabApresiasi.classList.add('clay-pressed', 'clay-btn-primary');
+        tabPelanggaran.classList.remove('clay-pressed', 'clay-btn-primary');
+        await renderInputApresiasi(inputContent);
+    };
+
+    tabPelanggaran.addEventListener('click', showPelanggaran);
+    tabApresiasi.addEventListener('click', showApresiasi);
+
+    // Default to pelanggaran
+    await showPelanggaran();
+  }
+
+  async function renderInputPelanggaran(container){
+    const ses = requireAuth();
+    const [types, siswa, cats, currentUser] = await Promise.all([
+        db.types(), db.siswa(), db.categories(), db.getDoc(DB_KEYS.USERS, ses.id)
+    ]);
+    const presets = currentUser ? (currentUser.presets || []) : [];
+
+    if(types.length===0 || siswa.length===0){
+      container.innerHTML = card('Input Pelanggaran', `<div class="text-slate-600">Pastikan <b>Jenis Pelanggaran</b> dan <b>Data Siswa</b> sudah diisi.</div>`);
+      return;
+    }
+
+    const presetButtons = presets.map(typeId => {
+      const type = types.find(t => t.id === typeId);
+      if (!type) return '';
+      return `<button type="button" onclick="selectPreset('${type.id}')" class="text-xs px-2.5 py-1 border rounded-full hover:bg-blue-50 hover:border-blue-300 transition-colors">${type.nama}</button>`;
+    }).join('');
+
+    const body = `
+      <div class="grid lg:grid-cols-5 gap-6">
+        <div class="lg:col-span-3">
+          <div class="panel">
+            <form id="formViolDraft" class="space-y-4">
+              <h4 class="font-semibold text-lg">Form Input Pelanggaran</h4>
+              <div>
+                <label class="text-sm font-medium text-slate-700">Siswa</label>
+                <div class="flex items-center gap-2 mt-1">
+                  <div class="relative w-full">
+                    <input type="text" id="siswaSearchInput" placeholder="Ketik Nama atau NIS Siswa..." class="clay-input">
+                    <input type="hidden" name="nis" id="selectedNis" required>
+                    <div id="siswaSearchResults" class="absolute z-10 w-full bg-white border border-slate-300 rounded-md mt-1 shadow-lg hidden max-h-60 overflow-y-auto"></div>
+                  </div>
+                  <button type="button" onclick="startQrScanner()" class="clay-btn clay-sm w-14 h-14 flex items-center justify-center" title="Pindai QR Siswa">
+                    ${iconHTML('qr')}
+                  </button>
+                </div>
+              </div>
+              <div>
+                <label class="text-sm font-medium text-slate-700">Jenis Pelanggaran</label>
+                <select required name="typeId" id="typeIdSelect" class="clay-input mt-1">
+                  <option value="">-- Pilih Jenis Pelanggaran --</option>
+                  ${types.map(t=>{
+                    const c = cats.find(x=>x.id===t.categoryId);
+                    return `<option value="${t.id}">${t.kode} — ${t.nama} [${c?c.nama:'-'}] (poin ${t.poin})</option>`;
+                  }).join('')}
+                </select>
+              </div>
+              <div class="pt-2">
+                <p class="text-sm font-medium mb-2 text-slate-700">Preset Cepat</p>
+                <div class="flex flex-wrap gap-2">${presetButtons || '<span class="text-xs text-slate-500">Belum ada preset.</span>'}</div>
+                <button type="button" onclick="managePresets()" class="text-sm text-blue-600 hover:underline mt-3">Kelola Preset</button>
+              </div>
+              <div>
+                <label class="text-sm font-medium text-slate-700">Catatan (Opsional)</label>
+                <input name="catatan" placeholder="Detail kejadian" class="clay-input mt-1">
+              </div>
+              <div>
+                <label class="text-sm font-medium text-slate-700">Lampiran Bukti (Opsional, maks 1MB)</label>
+                <input name="evidence" type="file" accept="image/*" class="w-full text-sm mt-1 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:font-semibold file:bg-slate-100 file:text-slate-700 hover:file:bg-slate-200">
+              </div>
+              <button type="submit" class="w-full clay-btn clay-btn-primary">Proses Pelanggaran</button>
+            </form>
+          </div>
+        </div>
+        <div class="lg:col-span-2">
+          <div class="panel">
+            <div class="flex justify-between items-center mb-3">
+              <h4 class="font-semibold text-lg">Draft Poin (<span id="draftCount">0</span>)</h4>
+              <button id="btnSubmitAll" class="clay-btn clay-sm" disabled>Simpan Semua</button>
+            </div>
+            <div id="draftList" class="space-y-2 max-h-[60vh] overflow-y-auto">
+              <div class="text-center text-slate-500 py-8">Belum ada draft</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+    container.innerHTML = body;
+    renderDraftList();
+
+    // --- Autocomplete Logic ---
+    const searchInput = document.getElementById('siswaSearchInput');
+    const resultsContainer = document.getElementById('siswaSearchResults');
+    const hiddenNisInput = document.getElementById('selectedNis');
+    const allSiswa = siswa;
+
+    const lastNis = localStorage.getItem(LAST_INPUT_NIS_KEY);
+    if (lastNis) {
+        const lastSiswa = allSiswa.find(s => s.nis === lastNis);
+        if (lastSiswa) {
+            searchInput.value = `${lastSiswa.nama} (${lastSiswa.nis})`;
+            hiddenNisInput.value = lastSiswa.nis;
+        }
+    }
+
+    searchInput.addEventListener('input', () => {
+        const query = searchInput.value.toLowerCase().trim();
+        hiddenNisInput.value = '';
+
+        if (query.length < 2) {
+            resultsContainer.innerHTML = '';
+            resultsContainer.classList.add('hidden');
+            return;
+        }
+
+        const filteredSiswa = allSiswa.filter(s => 
+            s.nama.toLowerCase().includes(query) || 
+            s.nis.toLowerCase().includes(query)
+        );
+
+        if (filteredSiswa.length > 0) {
+            resultsContainer.innerHTML = filteredSiswa.map(s => `
+                <div class="p-2 hover:bg-blue-50 cursor-pointer" data-nis="${s.nis}" data-nama="${s.nama}">
+                    <p class="font-medium">${s.nama}</p>
+                    <p class="text-xs text-slate-500">${s.nis} - ${s.kelas}</p>
+                </div>
+            `).join('');
+            resultsContainer.classList.remove('hidden');
+        } else {
+            resultsContainer.innerHTML = '<div class="p-2 text-sm text-slate-500">Tidak ada siswa ditemukan.</div>';
+            resultsContainer.classList.remove('hidden');
+        }
+    });
+
+    resultsContainer.addEventListener('click', (e) => {
+        const target = e.target.closest('[data-nis]');
+        if (target) {
+            const nis = target.dataset.nis;
+            const nama = target.dataset.nama;
+            searchInput.value = `${nama} (${nis})`;
+            hiddenNisInput.value = nis;
+            resultsContainer.classList.add('hidden');
+        }
+    });
+
+    document.addEventListener('click', (e) => {
+        if (!searchInput.contains(e.target) && !resultsContainer.contains(e.target)) {
+            resultsContainer.classList.add('hidden');
+        }
+    });
+
+    document.getElementById('formViolDraft').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const form = e.target;
+      const button = form.querySelector('button[type="submit"]');
+      showLoading(button);
+
+      const f = new FormData(form);
+      const obj = Object.fromEntries(f.entries());
+      
+      const type = types.find(t => t.id === obj.typeId);
+      if (!type) {
+          hideLoading(button);
+          return showToast('Jenis pelanggaran tidak valid.', 'error');
+      }
+
+      // NEW: Warning Logic
+      if (type.enforcement_mode === 'warning') {
+          const warnings = await db.warnings();
+          const existingWarning = warnings.find(w => w.nis === obj.nis && w.typeId === obj.typeId);
+
+          if (existingWarning) {
+              // Second offense, add to draft
+              showToast('Pelanggaran berulang, poin ditambahkan ke draft.', 'info');
+          } else {
+              // First offense, create a warning
+              const newWarning = { nis: obj.nis, typeId: obj.typeId, by: ses.username, at: firebase.firestore.FieldValue.serverTimestamp() };
+              await db.addDoc(DB_KEYS.WARNINGS, newWarning);
+              logAction('CREATE_WARNING', { nis: obj.nis, typeId: obj.typeId });
+              showToast('Peringatan pertama berhasil diberikan (belum ada poin).', 'success');
+              form.reset();
+              hiddenNisInput.value = '';
+              hideLoading(button);
+              return; // Stop execution, don't add to draft
+          }
+      }
+      
+      const fileInput = form.querySelector('input[name="evidence"]');
+      let evidenceURL = null;
+      if (fileInput.files[0]) {
+        if (fileInput.files[0].size > 1024 * 1024) {
+          hideLoading(button);
+          return showToast('Ukuran file bukti maksimal 1MB.', 'error');
+        }
+        try {
+          evidenceURL = await uploadFile(fileInput.files[0], 'evidence');
+        } catch (error) {
+          hideLoading(button);
+          return showToast('Gagal mengunggah file.', 'error');
+        }
+      }
+
+      const drafts = db.drafts(ses);
+      drafts.push({
+        nis: obj.nis,
+        typeId: obj.typeId,
+        catatan: obj.catatan,
+        evidence: evidenceURL,
+        isApresiasi: false
+      });
+      db.saveDrafts(ses, drafts);
+      localStorage.setItem(LAST_INPUT_NIS_KEY, obj.nis);
+      renderDraftList();
+      form.reset();
+      document.getElementById('siswaSearchInput').focus();
+      hiddenNisInput.value = '';
+      hideLoading(button);
+      showToast('Ditambahkan ke draft!', 'info');
+    });
+
+    document.getElementById('btnSubmitAll').addEventListener('click', async (e) => {
+      const button = e.target;
+      showLoading(button);
+      const drafts = db.drafts(ses);
+      if (drafts.length === 0) {
+        hideLoading(button);
+        return;
+      }
+      
+      const [allTypes, allApresTypes, allSiswa, meta] = await Promise.all([
+          db.types(), db.apresTypes(), db.siswa(), db.getMeta()
+      ]);
+
+      const batch = firestore.batch();
+      let violCount = 0;
+      let apresCount = 0;
+
+      for (const draft of drafts) {
+        if (draft.isApresiasi) {
+          const t = allApresTypes.find(x=>x.id===draft.typeId);
+          const record = {
+            nis: draft.nis, typeId: draft.typeId, poin: t ? Number(t.poin) : 0,
+            catatan: draft.catatan||'', by: ses?.username || 'system', at: firebase.firestore.FieldValue.serverTimestamp(),
+            status: APPROVAL.PENDING, approvers: [], evidence: draft.evidence
+          };
+          const docRef = firestore.collection(DB_KEYS.APRES).doc();
+          batch.set(docRef, record);
+          apresCount++;
+        } else {
+          const t = allTypes.find(x=>x.id===draft.typeId);
+          const s = allSiswa.find(x=>x.nis===draft.nis);
+          const weight = parseFloat((meta.weights||{})[s?.kelas] || 1);
+          const base = t? Number(t.poin):0;
+          const eff = Math.round(base * (Number.isFinite(weight)? weight : 1));
+          let status = VIOLATION_APPROVAL.PENDING_L1;
+          if(ses.role.startsWith('admin')) status = VIOLATION_APPROVAL.APPROVED;
+
+          const record = {
+            nis: draft.nis, typeId: draft.typeId, basePoin: base, effPoin: eff,
+            catatan: draft.catatan||'', by: ses?.username || 'system', at: firebase.firestore.FieldValue.serverTimestamp(),
+            status, approvers: [], evidence: draft.evidence, appeal: null
+          };
+          const docRef = firestore.collection(DB_KEYS.VIOLATIONS).doc();
+          batch.set(docRef, record);
+          
+          const siswa = allSiswa.find(sw => sw.nis === record.nis);
+          const kelas = (await db.kelas()).find(k => k.nama === siswa.kelas);
+          if (kelas && kelas.waliId) {
+            await createNotification(kelas.waliId, `Pelanggaran baru untuk siswa ${siswa.nama} menunggu persetujuan Anda.`, 'riwayat');
+          }
+          violCount++;
+        }
+      }
+      
+      await batch.commit();
+      logAction('BULK_SUBMIT_DRAFTS', { violCount, apresCount });
+      db.saveDrafts(ses, []);
+      renderDraftList();
+      hideLoading(button);
+      Swal.fire('Berhasil!', `${violCount} pelanggaran dan ${apresCount} apresiasi berhasil disimpan.`, 'success');
+      route('riwayat');
+    });
+  }
+
+  let html5QrCode = null;
+  function startQrScanner() {
+    const modalHTML = `
+      <div class="relative">
+        <div id="qr-reader" style="width: 100%;"></div>
+      </div>
+      <p class="text-xs text-center text-slate-500 mt-2">Arahkan kamera ke QR code NIS siswa</p>
+      <button id="stopScannerBtn" class="mt-4 w-full clay-btn">Tutup Pemindai</button>
+    `;
+    showModal('Pindai QR Code Siswa', modalHTML);
+
+    html5QrCode = new Html5Qrcode("qr-reader");
+    const qrCodeSuccessCallback = async (decodedText, decodedResult) => {
+      const siswaQuery = await firestore.collection(DB_KEYS.SISWA).where('nis', '==', decodedText).get();
+      if (!siswaQuery.empty) {
+        const siswa = siswaQuery.docs[0].data();
+        document.getElementById('siswaSearchInput').value = `${siswa.nama} (${siswa.nis})`;
+        document.getElementById('selectedNis').value = siswa.nis;
+        showToast(`Siswa ditemukan: ${siswa.nama}`);
+        stopQrScanner();
+      } else {
+        showToast(`Siswa dengan NIS ${decodedText} tidak ditemukan.`, 'error');
+      }
+    };
+    const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+
+    html5QrCode.start({ facingMode: "environment" }, config, qrCodeSuccessCallback)
+      .catch(err => {
+        console.error("Gagal memulai QR scanner", err);
+        showToast("Tidak dapat mengakses kamera.", 'error');
+        hideModal();
+      });
+    
+    document.getElementById('stopScannerBtn').addEventListener('click', stopQrScanner);
+  }
+
+  function stopQrScanner() {
+    if (html5QrCode && html5QrCode.isScanning) {
+      html5QrCode.stop().then(() => {
+        hideModal();
+      }).catch(err => {
+        console.error("Gagal menghentikan QR scanner", err);
+        hideModal();
+      });
+    } else {
+      hideModal();
+    }
+  }
+
+  // --- Draft & Preset Logic ---
+  async function renderDraftList() {
+    const ses = getSession();
+    if (!ses) return;
+    const drafts = db.drafts(ses);
+    const draftListEl = document.getElementById('draftList');
+    const draftCountEl = document.getElementById('draftCount');
+    const btnSubmitAll = document.getElementById('btnSubmitAll');
+
+    if (!draftListEl || !draftCountEl || !btnSubmitAll) return; // Guard against elements not on page
+
+    draftCountEl.textContent = drafts.length;
+    if (drafts.length === 0) {
+      draftListEl.innerHTML = '<div class="text-center text-slate-500 py-8">Belum ada draft</div>';
+      btnSubmitAll.disabled = true;
+    } else {
+      const [siswa, types, apresTypes] = await Promise.all([db.siswa(), db.types(), db.apresTypes()]);
+      draftListEl.innerHTML = drafts.map((d, index) => {
+        const s = siswa.find(x => x.nis === d.nis);
+        const isApresiasi = d.isApresiasi;
+        const t = isApresiasi ? apresTypes.find(x => x.id === d.typeId) : types.find(x => x.id === d.typeId);
+        return `
+          <div class="p-3 border rounded-lg flex items-center justify-between text-sm ${isApresiasi ? 'bg-green-50' : 'bg-red-50'}">
+            <div>
+              <p class="font-semibold text-slate-800">${s ? s.nama : d.nis}</p>
+              <p class="text-xs text-slate-600">${t ? t.nama : 'Error'}</p>
+              ${d.evidence ? `<p class="text-xs text-blue-500 font-medium mt-1">${iconHTML('upload')} Ada bukti</p>` : ''}
+            </div>
+            <button onclick="removeDraft(${index})" class="text-red-500 hover:text-red-700 font-bold text-xl">&times;</button>
+          </div>
+        `;
+      }).join('');
+      btnSubmitAll.disabled = false;
+    }
+  }
+  window.removeDraft = (index) => {
+    const ses = getSession();
+    const drafts = db.drafts(ses);
+    drafts.splice(index, 1);
+    db.saveDrafts(ses, drafts);
+    renderDraftList();
+  }
+  window.selectPreset = (typeId) => {
+    document.getElementById('typeIdSelect').value = typeId;
+  }
+  async function managePresets() {
+    const ses = getSession();
+    const currentUser = await db.getDoc(DB_KEYS.USERS, ses.id);
+    const currentPresets = new Set(currentUser.presets || []);
+    const allTypes = await db.types();
+
+    const bodyHTML = `
+      <p class="text-sm text-slate-600 mb-4">Pilih jenis pelanggaran yang sering Anda gunakan untuk akses cepat.</p>
+      <form id="presetForm" class="space-y-2">
+        <div class="max-h-60 overflow-y-auto border rounded-lg p-3 space-y-2">
+        ${allTypes.map(type => `
+          <label class="flex items-center gap-3 p-2 rounded-lg hover:bg-slate-50 cursor-pointer">
+            <input type="checkbox" name="presetIds" value="${type.id}" class="rounded border-slate-300 text-blue-600 focus:ring-blue-500" ${currentPresets.has(type.id) ? 'checked' : ''}>
+            <span>${type.nama}</span>
+          </label>
+        `).join('')}
+        </div>
+        <div class="pt-4 border-t mt-4">
+          <button type="submit" class="w-full clay-btn clay-btn-primary">Simpan Preset</button>
+        </div>
+      </form>
+    `;
+    showModal('Kelola Preset Cepat', bodyHTML, async (formData, button) => {
+      const selectedIds = formData.getAll('presetIds');
+      await db.updateDoc(DB_KEYS.USERS, ses.id, { presets: selectedIds });
+      hideModal();
+      showToast('Preset berhasil diperbarui!');
+      route('input-catatan');
+    });
+  }
+  
+  // NEW: Firebase Storage Upload Function
+  async function uploadFile(file, folder = 'evidence') {
+      const fileName = `${folder}/${Date.now()}-${file.name}`;
+      const storageRef = storage.ref(fileName);
+      await storageRef.put(file);
+      return await storageRef.getDownloadURL();
+  }
+
+  const toBase64 = file => new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = error => reject(error);
+  });
+  
+  // --- RIWAYAT & APPROVAL ---
+  async function renderRiwayat(){
+    const ses = getSession();
+    // Siswa diarahkan ke halaman riwayatnya sendiri
+    if (ses.role === 'siswa') {
+        return renderRiwayatSaya();
+    }
+
+    const [violAll, apresAll, types, apresTypes, siswa, allKelas] = await Promise.all([
+        db.violations(), db.apres(), db.types(), db.apresTypes(), db.siswa(), db.kelas()
+    ]);
+
+    const allEntries = [
+        ...violAll.map(v => ({...v, entryType: 'pelanggaran'})), 
+        ...apresAll.map(a => ({...a, entryType: 'apresiasi'}))
+    ].sort((a,b)=> (b.at?.toDate() || 0) - (a.at?.toDate() || 0));
+    
+    const filterBar = document.createElement('div');
+    filterBar.className = 'flex flex-wrap items-center gap-3 mb-4';
+    filterBar.innerHTML = `
+      <select id="statusFilter" class="clay-input text-sm py-2">
+        <option value="">Semua Status</option>
+        <optgroup label="Pelanggaran">
+          <option value="v_${VIOLATION_APPROVAL.PENDING_L1}">Pending Wali</option>
+          <option value="v_${VIOLATION_APPROVAL.PENDING_L2}">Pending Admin</option>
+          <option value="v_${VIOLATION_APPROVAL.APPROVED}">Approved</option>
+          <option value="v_${VIOLATION_APPROVAL.REJECTED}">Rejected</option>
+          <option value="v_${VIOLATION_APPROVAL.APPEAL_PENDING}">Banding</option>
+        </optgroup>
+        <optgroup label="Apresiasi">
+          <option value="a_${APPROVAL.PENDING}">Pending</option>
+          <option value="a_${APPROVAL.APPROVED}">Approved</option>
+          <option value="a_${APPROVAL.REJECTED}">Rejected</option>
+        </optgroup>
+      </select>
+      <input id="searchText" placeholder="Cari nama/NIS/jenis..." class="clay-input text-sm py-2">
+    `;
+
+    viewArea.innerHTML = card('Riwayat Catatan Siswa', `<div id="wrapRiwayat"></div>`);
+    const wrap = document.getElementById('wrapRiwayat');
+    wrap.prepend(filterBar);
+
+    let waliSiswaNis = null;
+    if (ses.role === 'wali') {
+      const kelasDiampu = allKelas.filter(k => k.waliId === ses.id).map(k => k.nama);
+      if (kelasDiampu.length > 0) {
+        waliSiswaNis = new Set(siswa.filter(s => kelasDiampu.includes(s.kelas)).map(s => s.nis));
+      }
+    }
+
+    function canApprove(item){
+      if (item.entryType === 'pelanggaran') {
+        if(ses.role==='wali' && item.status===VIOLATION_APPROVAL.PENDING_L1 && waliSiswaNis.has(item.nis)) return true;
+        if(ses.role.startsWith('admin') && item.status===VIOLATION_APPROVAL.PENDING_L2) return true;
+        if((ses.role.startsWith('admin') || (ses.role === 'wali' && waliSiswaNis.has(item.nis))) && item.status===VIOLATION_APPROVAL.APPEAL_PENDING) return true;
+      } else { // Apresiasi
+        if((ses.role.startsWith('admin') || (ses.role === 'wali' && waliSiswaNis.has(item.nis))) && item.status===APPROVAL.PENDING) return true;
+      }
+      return false;
+    }
+
+    function renderList(){
+      const filterVal = document.getElementById('statusFilter').value;
+      const q = document.getElementById('searchText').value.trim().toLowerCase();
+      
+      const entries = allEntries.filter(item => {
+        if (filterVal) {
+          const [type, status] = filterVal.split('_');
+          if ((type === 'v' && item.entryType !== 'pelanggaran') || (type === 'a' && item.entryType !== 'apresiasi')) {
+            return false;
+          }
+          if (item.status !== status) return false;
+        }
+
+        if (ses.role === 'wali' && waliSiswaNis && !waliSiswaNis.has(item.nis)) return false;
+        if (ses.role === 'guru') { // Guru hanya bisa lihat inputannya sendiri
+            if (item.by !== ses.username) return false;
+        }
+        
+        if (!q) return true;
+        const s = siswa.find(x => x.nis === item.nis);
+        const typeInfo = item.entryType === 'pelanggaran' ? types.find(x => x.id === item.typeId) : apresTypes.find(x => x.id === item.typeId);
+        const blob = `${s ? s.nama : ''} ${item.nis} ${typeInfo ? typeInfo.nama : ''}`.toLowerCase();
+        return blob.includes(q);
+      });
+
+      const rows = entries.map(item => {
+        const s = siswa.find(x=>x.nis===item.nis);
+        const isViolation = item.entryType === 'pelanggaran';
+        const typeInfo = isViolation ? types.find(x=>x.id===item.typeId) : apresTypes.find(x=>x.id===item.typeId);
+        
+        let action = '';
+        if (canApprove(item)) {
+          if (isViolation && item.status === VIOLATION_APPROVAL.APPEAL_PENDING) {
+            action = `<button class="font-medium text-blue-600 hover:underline" onclick="resolveAppeal('${item.id}')">Tinjau Banding</button>`;
+          } else {
+            const approveFn = isViolation ? `approveViol('${item.id}', true)` : `approveApres('${item.id}', true)`;
+            const rejectFn = isViolation ? `approveViol('${item.id}', false)` : `approveApres('${item.id}', false)`;
+            action = `<button class="font-medium text-green-600 hover:underline" onclick="${approveFn}">Approve</button> <button class="font-medium text-red-600 hover:underline" onclick="${rejectFn}">Reject</button>`;
+          }
+        } else if (ses.role==='admin_super') {
+          const delFn = isViolation ? `delViol('${item.id}')` : `delApres('${item.id}')`;
+          action = `<button class="font-medium text-red-600 hover:underline" onclick="${delFn}">Hapus</button>`;
+        }
+
+        let catatanHTML = item.catatan||'-';
+        if (item.evidence) {
+          catatanHTML += `<div class="mt-1"><a href="${item.evidence}" target="_blank" class="text-xs text-blue-600 hover:underline font-medium">Lihat Bukti</a></div>`;
+        }
+
+        return `<tr class="hover:bg-slate-200/30 transition-colors ${isViolation ? 'bg-red-50/30' : 'bg-green-50/30'}">
+          <td class="px-4 py-3">${fmtDate(item.at)}</td>
+          <td class="px-4 py-3">${s? `${s.nama} <span class='text-slate-500'>(${s.kelas})</span>`: item.nis}</td>
+          <td class="px-4 py-3">${typeInfo? typeInfo.nama: item.typeId}</td>
+          <td class="px-4 py-3 font-semibold ${isViolation ? 'text-red-600' : 'text-green-600'}">${isViolation ? item.effPoin : `+${item.poin}`}</td>
+          <td class="px-4 py-3">${statusBadge(item.status, item.entryType)}</td>
+          <td class="px-4 py-3">${catatanHTML}</td>
+          <td class="px-4 py-3 text-slate-500">${item.by}</td>
+          <td class="px-4 py-3">${action}</td>
+        </tr>`
+      }).join('');
+
+      const tableHTML = table(['Tanggal','Siswa','Deskripsi','Poin','Status','Catatan/Bukti','Input Oleh','Aksi'], rows || '<tr><td class="px-4 py-3 text-center" colspan="8">Tidak ada data yang sesuai dengan filter.</td></tr>');
+      const currentFilterBar = document.getElementById('wrapRiwayat').querySelector('.flex');
+      wrap.innerHTML = currentFilterBar.outerHTML + tableHTML;
+      
+      wrap.querySelector('#statusFilter').addEventListener('change', renderList);
+      wrap.querySelector('#searchText').addEventListener('input', renderList);
+    }
+    renderList();
+  }
+  async function approveViol(id, isApprove){
+    const ses = getSession();
+    const v = await db.getDoc(DB_KEYS.VIOLATIONS, id); if(!v) return;
+    const guruInputQuery = await firestore.collection(DB_KEYS.USERS).where('username', '==', v.by).get();
+    const guruInput = guruInputQuery.empty ? null : {id: guruInputQuery.docs[0].id, ...guruInputQuery.docs[0].data()};
+
+    const approverEntry = { by: ses.username, at: new Date().toISOString() };
+
+    if(isApprove){
+      if(ses.role==='wali' && v.status===VIOLATION_APPROVAL.PENDING_L1){
+        await db.updateDoc(DB_KEYS.VIOLATIONS, id, { 
+            status: VIOLATION_APPROVAL.PENDING_L2, 
+            approvers: firebase.firestore.FieldValue.arrayUnion({...approverEntry, level: 1, action: 'Approved L1'})
+        });
+        logAction('APPROVE_VIOLATION_L1', { violationId: id });
+        const admins = (await db.users()).filter(u=>u.role.startsWith('admin'));
+        const siswa = await db.getDoc(DB_KEYS.SISWA, v.siswaId);
+        admins.forEach(admin => {
+            createNotification(admin.id, `Pelanggaran oleh ${siswa?.nama || v.nis} menunggu persetujuan akhir.`, 'riwayat');
+        });
+      } else if(ses.role.startsWith('admin') && v.status===VIOLATION_APPROVAL.PENDING_L2){
+        await db.updateDoc(DB_KEYS.VIOLATIONS, id, { 
+            status: VIOLATION_APPROVAL.APPROVED, 
+            approvers: firebase.firestore.FieldValue.arrayUnion({...approverEntry, level: 2, action: 'Approved L2'})
+        });
+        logAction('APPROVE_VIOLATION_L2', { violationId: id });
+        if (guruInput) {
+            const siswa = await db.getDoc(DB_KEYS.SISWA, v.siswaId);
+            createNotification(guruInput.id, `Entri pelanggaran Anda untuk ${siswa?.nama || v.nis} telah disetujui.`, 'riwayat');
+        }
+      }
+      showToast('Pelanggaran disetujui!', 'success');
+    } else {
+      const { value: reason } = await Swal.fire({
+        title: 'Alasan Penolakan',
+        input: 'textarea',
+        inputLabel: 'Mohon berikan alasan mengapa pelanggaran ini ditolak. Alasan ini wajib diisi.',
+        inputPlaceholder: 'Contoh: Bukti tidak cukup, salah input siswa...',
+        showCancelButton: true,
+        confirmButtonText: 'Tolak Pelanggaran',
+        cancelButtonText: 'Batal',
+        inputValidator: (value) => {
+          if (!value) {
+            return 'Anda harus mengisi alasan penolakan!'
+          }
+        }
+      });
+
+      if (reason) {
+        await db.updateDoc(DB_KEYS.VIOLATIONS, id, { 
+            status: VIOLATION_APPROVAL.REJECTED, 
+            approvers: firebase.firestore.FieldValue.arrayUnion({...approverEntry, reject:true, reason: reason.trim(), action: 'Rejected'})
+        });
+        logAction('REJECT_VIOLATION', { violationId: id, reason: reason.trim() });
+        if (guruInput) {
+            const siswa = await db.getDoc(DB_KEYS.SISWA, v.siswaId);
+            createNotification(guruInput.id, `Entri pelanggaran Anda untuk ${siswa?.nama || v.nis} ditolak.`, 'riwayat');
+        }
+        showToast('Pelanggaran telah ditolak.', 'error');
+      } else {
+        return;
+      }
+    }
+    route('riwayat');
+  }
+  async function delViol(id){
+    if(!requireRole(['admin_super'])) return;
+    const violToDelete = await db.getDoc(DB_KEYS.VIOLATIONS, id);
+    const result = await showConfirm('Hapus Riwayat?', 'Anda akan menghapus catatan pelanggaran ini secara permanen.');
+    if (result.isConfirmed) {
+      await db.deleteDoc(DB_KEYS.VIOLATIONS, id);
+      logAction('DELETE_VIOLATION', { violationId: id, nis: violToDelete.nis });
+      showToast('Catatan pelanggaran dihapus.');
+      route('riwayat');
+    }
+  }
+  async function approveApres(id, isApprove){
+    const ses = getSession();
+    const actionBy = { by: ses.username, at: new Date().toISOString() };
+    if(isApprove){
+      await db.updateDoc(DB_KEYS.APRES, id, { 
+          status: APPROVAL.APPROVED, 
+          approvers: firebase.firestore.FieldValue.arrayUnion({ ...actionBy, action: 'Approved' })
+      });
+      logAction('APPROVE_APRESIASI', { apresiasiId: id });
+      showToast('Apresiasi disetujui!', 'success');
+    } else {
+      const { value: reason } = await Swal.fire({
+        title: 'Alasan Penolakan',
+        input: 'textarea',
+        inputLabel: 'Mohon berikan alasan mengapa apresiasi ini ditolak.',
+        inputPlaceholder: 'Contoh: Bukti tidak valid...',
+        showCancelButton: true,
+        confirmButtonText: 'Tolak Apresiasi',
+        cancelButtonText: 'Batal'
+      });
+      if (reason) {
+        await db.updateDoc(DB_KEYS.APRES, id, { 
+            status: APPROVAL.REJECTED, 
+            approvers: firebase.firestore.FieldValue.arrayUnion({ ...actionBy, action: 'Rejected', reason: reason.trim() })
+        });
+        logAction('REJECT_APRESIASI', { apresiasiId: id, reason: reason.trim() });
+        showToast('Apresiasi telah ditolak.', 'error');
+      } else {
+        return;
+      }
+    }
+    route('riwayat');
+  }
+  async function delApres(id){
+    if(!requireRole(['admin_super'])) return;
+    const apresToDelete = await db.getDoc(DB_KEYS.APRES, id);
+    const result = await showConfirm('Hapus Riwayat?', 'Anda akan menghapus catatan apresiasi ini secara permanen.');
+    if (result.isConfirmed) {
+      await db.deleteDoc(DB_KEYS.APRES, id);
+      logAction('DELETE_APRESIASI', { apresiasiId: id, nis: apresToDelete.nis });
+      showToast('Catatan apresiasi dihapus.');
+      route('riwayat');
+    }
+  }
+  async function resolveAppeal(id) {
+    const ses = getSession();
+    const v = await db.getDoc(DB_KEYS.VIOLATIONS, id);
+    if (!v) return showToast('Data tidak ditemukan', 'error');
+
+    const evidenceHTML = v.appeal.evidenceURL 
+        ? `<div class="mt-2"><b>Bukti dari Siswa:</b><br><a href="${v.appeal.evidenceURL}" target="_blank" rel="noopener noreferrer" class="text-blue-600 hover:underline">Lihat/Unduh Bukti</a></div>` 
+        : '<p class="text-sm text-slate-500 mt-2">(Tidak ada bukti yang dilampirkan)</p>';
+
+    const siswa = (await db.siswa()).find(s=>s.nis===v.nis);
+
+    const { value: action } = await Swal.fire({
+      title: 'Tinjau Banding Siswa',
+      html: `<div class="text-left">
+        <p class="mb-2"><b>Siswa:</b> ${siswa?.nama || v.nis}</p>
+        <p class="mb-2"><b>Alasan Banding:</b><br><span class="p-2 bg-slate-100 rounded-md block">${v.appeal.reason}</span></p>
+        ${evidenceHTML}
+        <p class="mt-4">Pilih aksi untuk banding ini:</p>
+      </div>`,
+      input: 'radio',
+      inputOptions: {
+        'reject': 'Tolak Banding (status kembali ke Approved)',
+        'accept': 'Terima Banding (status kembali ke Pending L1 untuk ditinjau ulang)'
+      },
+      inputValidator: (value) => {
+        if (!value) return 'Anda harus memilih salah satu aksi!';
+      },
+      showCancelButton: true,
+      confirmButtonText: 'Proses',
+    });
+
+    const appealUpdate = { ...v.appeal };
+    let newStatus = v.status;
+
+    if (action === 'reject') {
+      newStatus = VIOLATION_APPROVAL.APPROVED;
+      appealUpdate.status = 'rejected';
+      appealUpdate.resolvedBy = ses.username;
+      appealUpdate.resolvedAt = new Date().toISOString();
+      logAction('REJECT_APPEAL', { violationId: id });
+      showToast('Banding ditolak.', 'info');
+    } else if (action === 'accept') {
+      newStatus = VIOLATION_APPROVAL.PENDING_L1;
+      appealUpdate.status = 'accepted';
+      appealUpdate.resolvedBy = ses.username;
+      appealUpdate.resolvedAt = new Date().toISOString();
+      logAction('ACCEPT_APPEAL', { violationId: id });
+      showToast('Banding diterima, pelanggaran akan ditinjau ulang.', 'success');
+    }
+    
+    if (action) {
+        await db.updateDoc(DB_KEYS.VIOLATIONS, id, { status: newStatus, appeal: appealUpdate });
+        route('riwayat');
+    }
+  }
+  async function renderRiwayatSaya(){
+    const ses = getSession();
+    if (ses.role !== 'siswa') {
+        route('dashboard'); // Redirect non-siswa
+        return;
+    }
+    const nis = ses.username; // Untuk siswa, username adalah NIS
+    
+    const [viol, apres, types, apresTypes] = await Promise.all([
+        db.violations(), db.apres(), db.types(), db.apresTypes()
+    ]);
+
+    const myViol = viol.filter(v=>v.nis===nis).map(v => ({...v, entryType: 'pelanggaran'}));
+    const myApres = apres.filter(a=>a.nis===nis).map(a => ({...a, entryType: 'apresiasi'}));
+    const allEntries = [...myViol, ...myApres].sort((a,b)=> (b.at?.toDate() || 0) - (a.at?.toDate() || 0));
+
+    const rows = allEntries.map(item => {
+      const isViolation = item.entryType === 'pelanggaran';
+      const typeInfo = isViolation ? types.find(x=>x.id===item.typeId) : apresTypes.find(x=>x.id===item.typeId);
+      
+      let actionButtons = '';
+      if (isViolation) {
+        actionButtons = `<button class="font-medium text-blue-600 hover:underline" onclick="showTimeline('${item.id}')">Lihat Progres</button>`;
+        if (item.status === VIOLATION_APPROVAL.APPROVED && !item.appeal) {
+          actionButtons += ` <button class="font-medium text-orange-600 hover:underline" onclick="submitAppeal('${item.id}')">Ajukan Banding</button>`;
+        }
+      }
+
+      return `<tr class="hover:bg-slate-200/30 transition-colors ${isViolation ? 'bg-red-50/30' : 'bg-green-50/30'}">
+        <td class="px-4 py-3">${fmtDate(item.at)}</td>
+        <td class="px-4 py-3">${typeInfo? typeInfo.nama: item.typeId}</td>
+        <td class="px-4 py-3 font-semibold ${isViolation ? 'text-red-600' : 'text-green-600'}">${isViolation ? item.effPoin : `+${item.poin}`}</td>
+        <td class="px-4 py-3">${statusBadge(item.status, item.entryType)}</td>
+        <td class="px-4 py-3">${item.catatan||'-'}</td>
+        <td class="px-4 py-3 space-x-3">${actionButtons || '-'}</td>
+      </tr>`
+    }).join('') || '<tr><td class="px-4 py-3 text-center" colspan="6">Belum ada data</td></tr>';
+
+    viewArea.innerHTML = card('Riwayat Saya', table(['Tanggal','Deskripsi','Poin','Status','Catatan', 'Aksi'], rows));
+  }
+  async function submitAppeal(id) {
+    const { value: formValues } = await Swal.fire({
+        title: 'Ajukan Banding',
+        html: `
+            <textarea id="appealReason" class="swal2-textarea" placeholder="Tuliskan alasan Anda mengajukan banding..."></textarea>
+            <input id="appealEvidence" type="file" class="swal2-file" accept="image/*,application/pdf">
+        `,
+        focusConfirm: false,
+        showCancelButton: true,
+        confirmButtonText: 'Kirim Banding',
+        cancelButtonText: 'Batal',
+        preConfirm: async () => {
+            const reason = document.getElementById('appealReason').value;
+            const evidenceFile = document.getElementById('appealEvidence').files[0];
+            if (!reason || reason.trim().length < 10) {
+                Swal.showValidationMessage('Alasan banding harus diisi (minimal 10 karakter)!');
+                return false;
+            }
+            if (!evidenceFile) {
+                Swal.showValidationMessage('Anda harus mengunggah file bukti!');
+                return false;
+            }
+            if (evidenceFile.size > 1024 * 1024) { // 1MB limit
+                Swal.showValidationMessage('Ukuran file bukti maksimal 1MB.');
+                return false;
+            }
+            // Show a mini-loader inside Swal
+            Swal.showLoading();
+            const evidenceURL = await uploadFile(evidenceFile, 'appeals');
+            return { reason: reason.trim(), evidenceURL };
+        }
+    });
+
+    if (formValues) {
+        const { reason, evidenceURL } = formValues;
+        const v = await db.getDoc(DB_KEYS.VIOLATIONS, id);
+        if (v) {
+            const appealData = {
+                reason: reason,
+                evidenceURL: evidenceURL,
+                status: 'pending',
+                at: new Date().toISOString()
+            };
+            await db.updateDoc(DB_KEYS.VIOLATIONS, id, { 
+                status: VIOLATION_APPROVAL.APPEAL_PENDING,
+                appeal: appealData
+            });
+            logAction('SUBMIT_APPEAL', { violationId: id });
+            
+            // NOTIFY ADMINS & WALI
+            const [siswa, kelas, users] = await Promise.all([db.siswa(), db.kelas(), db.users()]);
+            const currentSiswa = siswa.find(s => s.nis === v.nis);
+            const currentKelas = kelas.find(k => k.nama === currentSiswa.kelas);
+            const allAdmins = users.filter(u => u.role.startsWith('admin'));
+            if (currentKelas && currentKelas.waliId) {
+                const wali = users.find(u => u.id === currentKelas.waliId);
+                if(wali) allAdmins.push(wali);
+            }
+            allAdmins.forEach(u => createNotification(u.id, `Siswa ${currentSiswa.nama} mengajukan banding.`, 'riwayat'));
+
+            showToast('Banding berhasil diajukan.', 'success');
+            route('riwayat');
+        }
+    }
+  }
+  async function showTimeline(id) {
+    const v = await db.getDoc(DB_KEYS.VIOLATIONS, id);
+    if (!v) return;
+
+    let timelineHTML = `<li class="mb-4 ml-4">
+        <div class="absolute w-3 h-3 bg-gray-300 rounded-full mt-1.5 -left-1.5 border border-white"></div>
+        <time class="mb-1 text-sm font-normal leading-none text-gray-500">${fmtDate(v.at)}</time>
+        <h3 class="text-md font-semibold text-gray-900">Pelanggaran Dicatat</h3>
+        <p class="text-sm font-normal text-gray-600">Dicatat oleh: ${v.by}</p>
+      </li>`;
+
+    (v.approvers || []).forEach(ap => {
+      timelineHTML += `<li class="mb-4 ml-4">
+        <div class="absolute w-3 h-3 bg-gray-300 rounded-full mt-1.5 -left-1.5 border border-white"></div>
+        <time class="mb-1 text-sm font-normal leading-none text-gray-500">${fmtDate(ap.at)}</time>
+        <h3 class="text-md font-semibold text-gray-900">${ap.action || 'Status Diperbarui'}</h3>
+        <p class="text-sm font-normal text-gray-600">Oleh: ${ap.by}</p>
+        ${ap.reason ? `<p class="mt-1 p-2 text-xs bg-red-50 rounded-md">Alasan: ${ap.reason}</p>` : ''}
+      </li>`;
+    });
+
+    if (v.appeal) {
+      const evidenceLink = v.appeal.evidenceURL ? `<a href="${v.appeal.evidenceURL}" target="_blank" rel="noopener noreferrer" class="text-blue-600 hover:underline">Lihat bukti</a>` : '(tanpa bukti)';
+      timelineHTML += `<li class="mb-4 ml-4">
+        <div class="absolute w-3 h-3 bg-gray-300 rounded-full mt-1.5 -left-1.5 border border-white"></div>
+        <time class="mb-1 text-sm font-normal leading-none text-gray-500">${fmtDate(v.appeal.at)}</time>
+        <h3 class="text-md font-semibold text-gray-900">Banding Diajukan</h3>
+        <p class="mt-1 p-2 text-xs bg-purple-50 rounded-md">Alasan: ${v.appeal.reason}</p>
+        <p class="text-xs mt-1">Bukti: ${evidenceLink}</p>
+      </li>`;
+      if (v.appeal.status !== 'pending') {
+        timelineHTML += `<li class="ml-4">
+          <div class="absolute w-3 h-3 bg-gray-300 rounded-full mt-1.5 -left-1.5 border border-white"></div>
+          <time class="mb-1 text-sm font-normal leading-none text-gray-500">${fmtDate(v.appeal.resolvedAt)}</time>
+          <h3 class="text-md font-semibold text-gray-900">Banding Ditinjau</h3>
+          <p class="text-sm font-normal text-gray-600">Oleh: ${v.appeal.resolvedBy}. Hasil: ${v.appeal.status === 'accepted' ? 'Diterima' : 'Ditolak'}</p>
+        </li>`;
+      }
+    }
+
+    Swal.fire({
+      title: 'Progres Pelanggaran',
+      html: `<ol class="relative border-l border-gray-200 mt-4">${timelineHTML}</ol>`,
+      showConfirmButton: true,
+      confirmButtonText: 'Tutup'
+    });
+  }
+  
+  // --- NEW LAPORAN ---
+  async function renderLaporan() {
+    const [allSiswa, allKelas, viol, apres, meta] = await Promise.all([
+        db.siswa(), db.kelas(), db.violations(), db.apres(), db.getMeta()
+    ]);
+    
+    const approvedViol = viol.filter(v => v.status === VIOLATION_APPROVAL.APPROVED);
+    const approvedApres = apres.filter(a => a.status === APPROVAL.APPROVED);
+    const thresholds = meta.thresholds || { sp1: 50, sp2: 75, skorsing: 100 };
+
+    const kelasOptions = allKelas.map(k => `<option value="${k.nama}">${k.nama}</option>`).join('');
+
+    const actionsHTML = `
+        <div class="flex flex-wrap items-center gap-2">
+            <button id="downloadPerKelasBtn" class="clay-btn clay-sm flex items-center gap-2">${iconHTML('download')} Unduh Laporan Terfilter</button>
+            <button id="downloadAllBtn" class="clay-btn clay-sm flex items-center gap-2">${iconHTML('download')} Unduh Semua Siswa</button>
+        </div>
+    `;
+
+    const filterHTML = `
+        <div class="flex flex-wrap items-center gap-3 mb-4">
+            <select id="laporanKelasFilter" class="clay-input text-sm py-2 w-48">
+                <option value="">Semua Kelas</option>
+                ${kelasOptions}
+            </select>
+        </div>
+    `;
+
+    viewArea.innerHTML = card('Laporan Poin Siswa', filterHTML + '<div id="laporanTableContainer"></div>', actionsHTML);
+    const tableContainer = document.getElementById('laporanTableContainer');
+
+    const calculatePoin = (nis) => {
+        const totalViol = approvedViol.filter(v => v.nis === nis).reduce((a, c) => a + Number(c.effPoin || 0), 0);
+        const totalApres = approvedApres.filter(a => a.nis === nis).reduce((a, c) => a + Number(c.poin || 0), 0);
+        const poinAkhir = Math.max(0, totalViol - totalApres);
+        const status = totalViol >= thresholds.skorsing ? badge('KRITIS', 'red') : totalViol >= thresholds.sp1 ? badge('Perlu Pembinaan', 'yellow') : badge('Aman', 'green');
+        return { totalViol, totalApres, poinAkhir, status };
+    };
+
+    const renderTable = (filteredSiswa) => {
+        const rows = filteredSiswa.map(s => {
+            const { totalViol, totalApres, poinAkhir, status } = calculatePoin(s.nis);
+            return `<tr>
+                <td class="px-4 py-3">${s.nis}</td>
+                <td class="px-4 py-3">${s.nama}</td>
+                <td class="px-4 py-3">${s.kelas}</td>
+                <td class="px-4 py-3">${totalViol}</td>
+                <td class="px-4 py-3">${totalApres}</td>
+                <td class="px-4 py-3 font-semibold">${poinAkhir}</td>
+                <td class="px-4 py-3">${status}</td>
+                <td class="px-4 py-3">
+                    <button class="text-xs font-medium text-blue-600 hover:underline" onclick="downloadStudentReport('${s.nis}')">Unduh Detail</button>
+                </td>
+            </tr>`;
+        }).join('');
+        tableContainer.innerHTML = table(['NIS', 'Nama', 'Kelas', 'Poin Pelanggaran', 'Poin Apresiasi', 'Poin Akhir', 'Status', 'Aksi'], rows);
+    };
+
+    const filterAndRender = () => {
+        const selectedKelas = document.getElementById('laporanKelasFilter').value;
+        const filtered = selectedKelas ? allSiswa.filter(s => s.kelas === selectedKelas) : allSiswa;
+        renderTable(filtered);
+    };
+
+    document.getElementById('laporanKelasFilter').addEventListener('change', filterAndRender);
+
+    const getReportData = (siswaList) => {
+        return siswaList.map(s => {
+            const { totalViol, totalApres, poinAkhir } = calculatePoin(s.nis);
+            return {
+                NIS: s.nis,
+                Nama: s.nama,
+                Kelas: s.kelas,
+                'Poin Pelanggaran': totalViol,
+                'Poin Apresiasi': totalApres,
+                'Poin Akhir': poinAkhir
+            };
+        });
+    };
+
+    document.getElementById('downloadAllBtn').addEventListener('click', () => {
+        const reportData = getReportData(allSiswa);
+        exportToCSV(reportData, 'laporan-semua-siswa.csv');
+    });
+
+    document.getElementById('downloadPerKelasBtn').addEventListener('click', () => {
+        const selectedKelas = document.getElementById('laporanKelasFilter').value;
+        const siswaToExport = selectedKelas ? allSiswa.filter(s => s.kelas === selectedKelas) : allSiswa;
+        const filename = selectedKelas ? `laporan-kelas-${selectedKelas.replace(/\s/g, '_')}.csv` : 'laporan-semua-siswa.csv';
+        const reportData = getReportData(siswaToExport);
+        exportToCSV(reportData, filename);
+    });
+
+    filterAndRender(); // Initial render
+  }
+
+  function exportToCSV(data, filename) {
+    if (!data || data.length === 0) {
+        return showToast('Tidak ada data untuk diunduh.', 'info');
+    }
+    const headers = Object.keys(data[0]);
+    const csvRows = [
+        headers.join(','),
+        ...data.map(row =>
+            headers.map(header => {
+                let value = row[header];
+                if (typeof value === 'string' && value.includes(',')) {
+                    return `"${value}"`;
+                }
+                return value;
+            }).join(',')
+        )
+    ];
+    const csvString = csvRows.join('\n');
+    const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    if (link.download !== undefined) {
+        const url = URL.createObjectURL(blob);
+        link.setAttribute('href', url);
+        link.setAttribute('download', filename);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+  }
+
+  window.downloadStudentReport = async (nis) => {
+    const [allSiswa, allViolations, allApres, allTypes, allApresTypes] = await Promise.all([
+        db.siswa(), db.violations(), db.apres(), db.types(), db.apresTypes()
+    ]);
+
+    const siswa = allSiswa.find(s => s.nis === nis);
+    if (!siswa) return;
+
+    const viol = allViolations.filter(v => v.nis === nis);
+    const apres = allApres.filter(a => a.nis === nis);
+
+    const reportData = [];
+    viol.forEach(v => {
+        reportData.push({
+            Tanggal: fmtDate(v.at),
+            Jenis: 'Pelanggaran',
+            Deskripsi: allTypes.find(t => t.id === v.typeId)?.nama || 'N/A',
+            Poin: `-${v.effPoin}`,
+            Status: v.status,
+            DiinputOleh: v.by
+        });
+    });
+    apres.forEach(a => {
+        reportData.push({
+            Tanggal: fmtDate(a.at),
+            Jenis: 'Apresiasi',
+            Deskripsi: allApresTypes.find(t => t.id === a.typeId)?.nama || 'N/A',
+            Poin: `+${a.poin}`,
+            Status: a.status,
+            DiinputOleh: a.by
+        });
+    });
+
+    reportData.sort((a, b) => new Date(b.Tanggal) - new Date(a.Tanggal));
+    exportToCSV(reportData, `detail-riwayat-${siswa.nama.replace(/\s/g, '_')}-${nis}.csv`);
+  };
+
+  async function renderPantauKelas(){
+    const [siswa, viol] = await Promise.all([db.siswa(), db.violations()]);
+    const approvedViol = viol.filter(v=>v.status===VIOLATION_APPROVAL.APPROVED);
+    const kelasList = [...new Set(siswa.map(s=>s.kelas))];
+
+    const filter = document.createElement('div');
+    filter.className = 'flex flex-wrap items-center gap-2 mb-3';
+    filter.innerHTML = `
+      <select id="kelasFilter" class="clay-input text-sm py-2">
+        <option value="">Semua Kelas</option>
+        ${kelasList.map(k=>`<option>${k}</option>`).join('')}
+      </select>
+      <input id="searchNama" placeholder="Cari nama/nis..." class="clay-input text-sm py-2">
+    `;
+
+    const wrap = document.createElement('div');
+    wrap.id = 'pantauWrap';
+
+    viewArea.innerHTML = card('Pantau Kelas', `<div id="pantauContainer"></div>`);
+    const container = document.getElementById('pantauContainer');
+    container.prepend(filter);
+    container.appendChild(wrap);
+
+    function renderList(){
+      const k = document.getElementById('kelasFilter').value.trim().toLowerCase();
+      const q = document.getElementById('searchNama').value.trim().toLowerCase();
+      const filtered = siswa.filter(s=> (k? s.kelas.toLowerCase()===k : true) && (q? (s.nama.toLowerCase().includes(q) || s.nis.toLowerCase().includes(q)):true));
+      const rows = filtered.map(s=>{
+        const total = approvedViol.filter(v=>v.nis===s.nis).reduce((a,c)=>a+Number(c.effPoin||0),0);
+        return `<tr class="hover:bg-slate-200/30 transition-colors">
+          <td class="px-4 py-3">${s.nis}</td><td class="px-4 py-3">${s.nama}</td>
+          <td class="px-4 py-3">${s.kelas}</td><td class="px-4 py-3 font-semibold">${total}</td>
+        </tr>`
+      }).join('');
+      wrap.innerHTML = table(['NIS','Nama','Kelas','Total Poin Pelanggaran'], rows || '<tr><td class="px-4 py-3 text-center" colspan="4">Tidak ada data</td></tr>');
+    }
+    renderList();
+    filter.addEventListener('input', renderList);
+  }
+  async function renderProfilSaya(){
+    const ses = getSession();
+    if (ses.role !== 'siswa') {
+        viewArea.innerHTML = card('Akses Ditolak', '<p>Halaman ini hanya untuk siswa.</p>');
+        return;
+    }
+
+    const myNis = ses.username; // NIS dari session
+    const [allSiswa, allViolations, allApres] = await Promise.all([db.siswa(), db.violations(), db.apres()]);
+    const s = allSiswa.find(x=>x.nis===myNis);
+    if(!s){ viewArea.innerHTML = '<div class="text-slate-600">Data siswa Anda tidak ditemukan, hubungi admin.</div>'; return; }
+
+    const totalViol = allViolations.filter(v=>v.nis===s.nis && v.status===VIOLATION_APPROVAL.APPROVED).reduce((a,c)=>a+Number(c.effPoin||0),0);
+    const totalApres = allApres.filter(a=>a.nis===s.nis && a.status===APPROVAL.APPROVED).reduce((a,c)=>a+Number(c.poin||0),0);
+    const poinAkhir = Math.max(0, totalViol - totalApres);
+
+    viewArea.innerHTML = `
+      <div class="grid md:grid-cols-2 gap-6">
+        ${card('Profil', `
+          <div class="space-y-3 text-sm">
+            <div class="flex justify-between"><span class="text-slate-500">Nama:</span> <span class="font-medium text-slate-800">${s.nama}</span></div>
+            <div class="flex justify-between"><span class="text-slate-500">NIS:</span> <span class="font-medium text-slate-800">${s.nis}</span></div>
+            <div class="flex justify-between"><span class="text-slate-500">Kelas:</span> <span class="font-medium text-slate-800">${s.kelas}</span></div>
+            <div class="flex justify-between"><span class="text-slate-500">Wali:</span> <span class="font-medium text-slate-800">${s.wali||'-'}</span></div>
+            <hr class="my-2 border-slate-300/50"/>
+            <div class="flex justify-between"><span class="text-slate-500">Total Poin Pelanggaran:</span> <span class="font-medium text-red-600">${totalViol}</span></div>
+            <div class="flex justify-between"><span class="text-slate-500">Total Poin Apresiasi:</span> <span class="font-medium text-green-600">${totalApres}</span></div>
+            <div class="flex justify-between pt-3 border-t border-slate-300/50"><span class="text-slate-500 font-bold">Poin Akhir:</span> <span class="font-bold text-lg ${poinAkhir > 0 ? 'text-red-600' : 'text-green-600'}">${poinAkhir}</span></div>
+          </div>
+        `)}
+        ${card('Aksi', `<button class="clay-btn clay-sm" onclick="route('riwayat')">Lihat Riwayat Lengkap</button>`)}
+      </div>
+    `;
+  }
+  async function renderPengaturanLengkap(){
+    if(!requireRole(['admin_super'])) return;
+    
+    viewArea.innerHTML = `
+        <div class="flex items-center gap-2 mb-4">
+            <button id="tab-sistem" class="clay-btn clay-sm">Sistem</button>
+            <button id="tab-kategori" class="clay-btn clay-sm">Kategori</button>
+            <button id="tab-jenis-pelanggaran" class="clay-btn clay-sm">Jenis Pelanggaran</button>
+            <button id="tab-jenis-apresiasi" class="clay-btn clay-sm">Jenis Apresiasi</button>
+            <button id="tab-data" class="clay-btn clay-sm">Manajemen Data</button>
+        </div>
+        <div id="pengaturan-content"></div>
+    `;
+
+    const tabs = {
+        sistem: document.getElementById('tab-sistem'),
+        kategori: document.getElementById('tab-kategori'),
+        'jenis-pelanggaran': document.getElementById('tab-jenis-pelanggaran'),
+        'jenis-apresiasi': document.getElementById('tab-jenis-apresiasi'),
+        data: document.getElementById('tab-data'),
+    };
+    const contentContainer = document.getElementById('pengaturan-content');
+
+    const setActiveTab = async (activeTab) => {
+        Object.keys(tabs).forEach(key => {
+            tabs[key].classList.remove('clay-pressed', 'clay-btn-primary');
+        });
+        tabs[activeTab].classList.add('clay-pressed', 'clay-btn-primary');
+        
+        contentContainer.innerHTML = '<div class="spinner"></div>'; // Loader
+        switch(activeTab) {
+            case 'sistem': await renderPengaturanSistem(contentContainer); break;
+            case 'kategori': await renderKategori(contentContainer); break;
+            case 'jenis-pelanggaran': await renderTypes(contentContainer); break;
+            case 'jenis-apresiasi': await renderApresTypes(contentContainer); break;
+            case 'data': await renderPengaturanData(contentContainer); break;
+        }
+    };
+
+    Object.keys(tabs).forEach(key => {
+        tabs[key].addEventListener('click', () => setActiveTab(key));
+    });
+
+    // Default to sistem tab
+    await setActiveTab('sistem');
+  }
+
+  async function renderPengaturanSistem(container){
+    const meta = await db.getMeta();
+    const weightsKV = Object.entries(meta.weights||{}).map(([k,v])=>`${k}=${v}`).join('\n');
+    const body = `
+      <form id="formSetting" class="grid gap-6 max-w-2xl">
+        <div class="grid md:grid-cols-3 gap-6">
+          <div>
+            <label class="block text-sm font-medium mb-1 text-slate-700">Threshold SP 1</label>
+            <input type="number" name="sp1" value="${meta.thresholds.sp1||50}" class="clay-input">
+          </div>
+          <div>
+            <label class="block text-sm font-medium mb-1 text-slate-700">Threshold SP 2</label>
+            <input type="number" name="sp2" value="${meta.thresholds.sp2||75}" class="clay-input">
+          </div>
+          <div>
+            <label class="block text-sm font-medium mb-1 text-slate-700">Threshold Skorsing</label>
+            <input type="number" name="skorsing" value="${meta.thresholds.skorsing||100}" class="clay-input">
+          </div>
+           <div>
+            <label class="block text-sm font-medium mb-1 text-slate-700">SLA Approval L1 (Hari)</label>
+            <input type="number" name="slaL1" value="${meta.sla.l1Days||3}" class="clay-input">
+          </div>
+          <div>
+            <label class="block text-sm font-medium mb-1 text-slate-700">SLA Approval L2 (Hari)</label>
+            <input type="number" name="slaL2" value="${meta.sla.l2Days||2}" class="clay-input">
+          </div>
+          <div class="md:col-span-3">
+            <label class="block text-sm font-medium mb-1 text-slate-700">Format Nomor Laporan</label>
+            <input name="reportFormat" value="${meta.reportFormat||''}" class="clay-input">
+          </div>
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-1 text-slate-700">Tanda Tangan Digital (URL/Base64)</label>
+          <textarea name="digitalSignature" class="clay-input h-24" placeholder="Data gambar: data:image/png;base64,iVBORw0KGgo...">${meta.digitalSignature||''}</textarea>
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-1 text-slate-700">Bobot Poin per Kelas</label>
+          <textarea name="weights" class="clay-input" placeholder="Contoh:\nX RPL=1\nXI RPL=1.2">${weightsKV}</textarea>
+          <p class="text-xs text-slate-500 mt-1">Gunakan format <kbd>NamaKelas=Bobot</kbd> per baris. Default 1.</p>
+        </div>
+        <div class="flex flex-wrap gap-2">
+          <button type="submit" class="clay-btn clay-btn-primary">Simpan Pengaturan</button>
+        </div>
+      </form>
+    `;
+    container.innerHTML = card('Pengaturan Sistem', body);
+
+    document.getElementById('formSetting').addEventListener('submit', async (e)=>{
+      e.preventDefault();
+      const button = e.target.querySelector('button[type="submit"]');
+      showLoading(button);
+      const f = new FormData(e.target); const obj = Object.fromEntries(f.entries());
+      
+      const newMeta = {};
+      newMeta.thresholds = { sp1: Number(obj.sp1), sp2: Number(obj.sp2), skorsing: Number(obj.skorsing) };
+      newMeta.sla = { l1Days: Number(obj.slaL1), l2Days: Number(obj.slaL2) };
+      newMeta.reportFormat = obj.reportFormat;
+      newMeta.digitalSignature = obj.digitalSignature;
+      const lines = (obj.weights||'').split(/\n+/).map(s=>s.trim()).filter(Boolean);
+      const weights = {};
+      lines.forEach(line=>{ const m=line.split('='); if(m.length===2){ const k=m[0].trim(); const v=parseFloat(m[1]); if(k && Number.isFinite(v)) weights[k]=v; }});
+      newMeta.weights = weights;
+      
+      await firestore.collection(DB_KEYS.META).doc('config').update(newMeta);
+      logAction('UPDATE_SETTINGS', { newSettings: newMeta });
+      hideLoading(button);
+      showToast('Pengaturan berhasil disimpan.');
+    });
+  }
+
+  async function renderPengaturanData(container) {
+    const body = `
+      <div id="hygieneResult" class="hidden mb-4 p-3 rounded-lg bg-yellow-50 text-yellow-800 border border-yellow-200"></div>
+      <div>
+        <h4 class="font-semibold mb-2 text-slate-900">Utilitas Data</h4>
+        <div class="flex flex-wrap gap-2">
+          <button type="button" id="btnCheckDuplicateNIS" class="clay-btn clay-sm">Cek Duplikat NIS</button>
+          <button type="button" id="btnCheckOrphans" class="clay-btn clay-sm">Cek Relasi Yatim</button>
+        </div>
+      </div>
+      <hr class="my-6 border-slate-300/50"/>
+      <div>
+        <h4 class="font-semibold mb-2 text-slate-900">Manajemen Data Global</h4>
+        <div class="flex flex-wrap gap-2">
+          <button type="button" id="btnExport" class="clay-btn clay-sm">Export Semua Data</button>
+          <label class="clay-btn clay-sm cursor-pointer">Import Semua Data
+            <input id="importFile" type="file" accept="application/json" class="hidden" />
+          </label>
+          <button type="button" id="btnClear" class="clay-btn clay-sm text-red-600">Hapus Semua Data</button>
+        </div>
+      </div>
+       <hr class="my-6 border-slate-300/50"/>
+       <div>
+        <h4 class="font-semibold mb-2 text-slate-900">Audit Trail</h4>
+        <div id="audit-trail-container">Memuat log...</div>
+      </div>
+    `;
+    container.innerHTML = card('Manajemen Data & Audit', body);
+
+    document.getElementById('btnExport').addEventListener('click', async ()=>{
+      const dump = {};
+      for (const key of Object.values(DB_KEYS)) {
+          dump[key] = await db.getCollection(key);
+      }
+      const blob = new Blob([JSON.stringify(dump, null, 2)], {type:'application/json'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href = url; a.download = `backup-poin-siswa-${new Date().toISOString().split('T')[0]}.json`; a.click(); URL.revokeObjectURL(url);
+      logAction('EXPORT_DATA');
+    });
+
+    document.getElementById('importFile').addEventListener('change', async (e)=>{
+      const file = e.target.files[0]; if(!file) return;
+      const result = await showConfirm('Impor Data?', 'Data yang ada saat ini akan ditimpa oleh data dari file impor. Lanjutkan?');
+      if(!result.isConfirmed) return;
+
+      const reader = new FileReader();
+      reader.onload = async ()=>{
+        try{
+          const data = JSON.parse(reader.result);
+          const batch = firestore.batch();
+          for (const key in data) {
+              if (Object.values(DB_KEYS).includes(key)) {
+                  // This is a simplified import; a robust one would handle conflicts.
+                  // For now, we assume we're writing to an empty DB.
+                  data[key].forEach(docData => {
+                      const docRef = firestore.collection(key).doc();
+                      batch.set(docRef, docData);
+                  });
+              }
+          }
+          await batch.commit();
+          logAction('IMPORT_DATA');
+          Swal.fire('Berhasil!', 'Data berhasil diimpor.', 'success').then(() => window.location.reload());
+        }catch(err){ Swal.fire('Gagal!', 'Gagal mengimpor data: '+err.message, 'error'); }
+      };
+      reader.readAsText(file);
+    });
+
+    document.getElementById('btnClear').addEventListener('click', async ()=>{
+      if(!requireRole(['admin_super'])) return;
+      const result = await showConfirm('HAPUS SEMUA DATA?', 'PERINGATAN: Anda akan menghapus SEMUA data (user, siswa, pelanggaran, log, dll). Akun super admin akan dibuat ulang. Yakin?');
+      if(!result.isConfirmed) return;
+      
+      // This is a destructive operation and should be handled with care in a real app.
+      // For this context, we'll just log and re-seed. A better approach would be a server-side function.
+      logAction('CLEAR_ALL_DATA');
+      alert("Fungsi hapus semua data perlu implementasi sisi server untuk keamanan. Untuk sekarang, silakan hapus koleksi secara manual di Firebase Console.");
+    });
+
+    const hygieneResult = document.getElementById('hygieneResult');
+    document.getElementById('btnCheckDuplicateNIS').addEventListener('click', async ()=>{
+      const siswa = await db.siswa();
+      const seen = new Set();
+      const duplicates = new Set();
+      siswa.forEach(s => { if(seen.has(s.nis)) duplicates.add(s.nis); else seen.add(s.nis); });
+      hygieneResult.classList.remove('hidden');
+      if(duplicates.size > 0){
+        hygieneResult.innerHTML = `<strong>Ditemukan Duplikat NIS:</strong> ${[...duplicates].join(', ')}`;
+      } else {
+        hygieneResult.innerHTML = 'Tidak ditemukan duplikat NIS.';
+      }
+    });
+    document.getElementById('btnCheckOrphans').addEventListener('click', async ()=>{
+      const [types, categories] = await Promise.all([db.types(), db.categories()]);
+      const catIds = new Set(categories.map(c=>c.id));
+      const orphans = types.filter(t => !catIds.has(t.categoryId));
+      hygieneResult.classList.remove('hidden');
+      if(orphans.length > 0){
+        hygieneResult.innerHTML = `<strong>Ditemukan Relasi Yatim:</strong> Jenis pelanggaran berikut merujuk ke kategori yang sudah dihapus: ${orphans.map(o=>`"${o.nama}"`).join(', ')}`;
+      } else {
+        hygieneResult.innerHTML = 'Tidak ditemukan relasi yatim.';
+      }
+    });
+
+    // Render Audit Trail
+    const logSnapshot = await firestore.collection(DB_KEYS.AUDIT_LOG).orderBy('at', 'desc').limit(100).get();
+    const logs = logSnapshot.docs.map(doc => doc.data());
+    const rows = logs.map(log => `
+      <tr class="hover:bg-slate-200/30 transition-colors">
+        <td class="px-4 py-3">${fmtDate(log.at)}</td>
+        <td class="px-4 py-3">${log.actor} (${log.role})</td>
+        <td class="px-4 py-3">${log.action}</td>
+        <td class="px-4 py-3 text-xs text-slate-500">${JSON.stringify(log.details)}</td>
+      </tr>
+    `).join('');
+    document.getElementById('audit-trail-container').innerHTML = table(['Waktu', 'Aktor', 'Aksi', 'Detail'], rows);
+  }
+  
+  // --- APRESIASI TYPES CRUD ---
+  async function renderApresTypes(container){
+    if(!requireRole(['admin_super', 'admin_operasional'])) return;
+    const [cats, items] = await Promise.all([db.categories(), db.apresTypes()]);
+    const body = items.map(t=>{
+        const c = cats.find(x=>x.id===t.categoryId);
+        return `
+        <tr class="hover:bg-slate-200/30 transition-colors">
+          <td class="px-4 py-3">${t.kode}</td><td class="px-4 py-3">${t.nama}</td>
+          <td class="px-4 py-3">${c? c.nama: '<span class="text-red-500">Tanpa Kategori</span>'}</td>
+          <td class="px-4 py-3 font-semibold text-green-600">+${t.poin}</td>
+          <td class="px-4 py-3 space-x-3">
+            <button class="font-medium text-blue-600 hover:underline" onclick="editApresType('${t.id}')">Edit</button>
+            <button class="font-medium text-red-600 hover:underline" onclick="delApresType('${t.id}')">Hapus</button>
+          </td>
+        </tr>`}).join('');
+    const actions = `<button onclick="addApresType()" class="clay-btn clay-sm clay-btn-primary flex items-center gap-2">${iconHTML('plus')} Tambah Jenis</button>`;
+    container.innerHTML = card('Jenis Apresiasi', table(['Kode','Nama','Kategori','Poin','Aksi'], body), actions);
+  }
+
+  async function getApresTypeFormHTML(type = {}) {
+    const cats = (await db.categories()).filter(c => c.tipe === 'apresiasi');
+    return `
+      <form class="space-y-4">
+        <div>
+          <label class="block text-sm font-medium mb-1 text-slate-700">Kode Apresiasi</label>
+          <input required name="kode" value="${type.kode || ''}" placeholder="mis. PRS" class="clay-input">
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-1 text-slate-700">Nama Apresiasi</label>
+          <input required name="nama" value="${type.nama || ''}" placeholder="mis. Juara 1 Lomba Cerdas Cermat" class="clay-input">
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-1 text-slate-700">Poin</label>
+          <input required name="poin" type="number" value="${type.poin || ''}" placeholder="mis. 10" class="clay-input">
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-1 text-slate-700">Kategori</label>
+          <select required name="categoryId" class="clay-input">
+            <option value="">-- Pilih Kategori --</option>
+            ${cats.map(c=>`<option value="${c.id}" ${type.categoryId === c.id ? 'selected' : ''}>${c.kode} — ${c.nama}</option>`).join('')}
+          </select>
+        </div>
+        <div class="pt-4 mt-4">
+          <button type="submit" class="w-full clay-btn clay-btn-primary">Simpan</button>
+        </div>
+      </form>
+    `;
+  }
+
+  async function addApresType() {
+    if(!requireRole(['admin_super', 'admin_operasional'])) return;
+    const formHTML = await getApresTypeFormHTML();
+    showModal('Tambah Jenis Apresiasi', formHTML, async (formData, button) => {
+      const obj = Object.fromEntries(formData.entries());
+      const typeQuery = await firestore.collection(DB_KEYS.APRES_TYPES).where('kode', '==', obj.kode).get();
+      if(!typeQuery.empty) {
+        hideLoading(button);
+        return showToast('Kode sudah ada.', 'error');
+      }
+      if(!obj.categoryId) {
+        hideLoading(button);
+        return showToast('Pilih kategori terlebih dahulu.', 'error');
+      }
+      const newType = { ...obj, poin: Number(obj.poin||0) };
+      await db.addDoc(DB_KEYS.APRES_TYPES, newType);
+      logAction('CREATE_APRES_TYPE', { kode: obj.kode, nama: obj.nama, poin: obj.poin });
+      hideModal();
+      showToast('Jenis apresiasi berhasil ditambahkan!');
+      route('pengaturan');
+    });
+  }
+
+  async function editApresType(id) {
+    if(!requireRole(['admin_super', 'admin_operasional'])) return;
+    const type = await db.getDoc(DB_KEYS.APRES_TYPES, id);
+    if (!type) return showToast('Jenis apresiasi tidak ditemukan', 'error');
+    const formHTML = await getApresTypeFormHTML(type);
+    showModal(`Edit Jenis: ${type.nama}`, formHTML, async (formData, button) => {
+      const updatedData = Object.fromEntries(formData.entries());
+      const dataToUpdate = { ...updatedData, poin: Number(updatedData.poin) };
+      await db.updateDoc(DB_KEYS.APRES_TYPES, id, dataToUpdate);
+      logAction('UPDATE_APRES_TYPE', { typeId: id, new: dataToUpdate });
+      hideModal();
+      showToast('Jenis apresiasi berhasil diperbarui!');
+      route('pengaturan');
+    });
+  }
+
+  async function delApresType(id) {
+    if(!requireRole(['admin_super'])) return;
+    const typeToDelete = await db.getDoc(DB_KEYS.APRES_TYPES, id);
+    if (!typeToDelete) return showToast('Jenis apresiasi tidak ditemukan', 'error');
+    const result = await showConfirm('Hapus Jenis Apresiasi?', `Anda akan menghapus "${typeToDelete.nama}".`);
+    if (result.isConfirmed) {
+      await db.deleteDoc(DB_KEYS.APRES_TYPES, id);
+      logAction('DELETE_APRES_TYPE', { typeId: id, nama: typeToDelete.nama });
+      showToast('Jenis apresiasi berhasil dihapus.');
+      route('pengaturan');
+    }
+  }
+
+  // --- INPUT APRESIASI ---
+  async function renderInputApresiasi(container){
+    const ses = requireAuth();
+    const [types, siswa, cats] = await Promise.all([db.apresTypes(), db.siswa(), db.categories()]);
+
+    if(types.length===0 || siswa.length===0){
+      container.innerHTML = card('Input Apresiasi', `<div class="text-slate-600">Pastikan <b>Jenis Apresiasi</b> dan <b>Data Siswa</b> sudah diisi.</div>`);
+      return;
+    }
+
+    const body = `
+      <div class="grid lg:grid-cols-5 gap-6">
+        <div class="lg:col-span-3">
+          <div class="panel">
+            <form id="formApresDraft" class="space-y-4">
+              <h4 class="font-semibold text-lg">Form Input Apresiasi</h4>
+              <div>
+                <label class="text-sm font-medium text-slate-700">Siswa</label>
+                <div class="flex items-center gap-2 mt-1">
+                  <div class="relative w-full">
+                    <input type="text" id="siswaSearchInput" placeholder="Ketik Nama atau NIS Siswa..." class="clay-input">
+                    <input type="hidden" name="nis" id="selectedNis" required>
+                    <div id="siswaSearchResults" class="absolute z-10 w-full bg-white border border-slate-300 rounded-md mt-1 shadow-lg hidden max-h-60 overflow-y-auto"></div>
+                  </div>
+                  <button type="button" onclick="startQrScanner()" class="clay-btn clay-sm w-14 h-14 flex items-center justify-center" title="Pindai QR Siswa">
+                    ${iconHTML('qr')}
+                  </button>
+                </div>
+              </div>
+              <div>
+                <label class="text-sm font-medium text-slate-700">Jenis Apresiasi</label>
+                <select required name="typeId" id="typeIdSelect" class="clay-input mt-1">
+                  <option value="">-- Pilih Jenis Apresiasi --</option>
+                  ${types.map(t=>{
+                    const c = cats.find(x=>x.id===t.categoryId);
+                    return `<option value="${t.id}">${t.kode} — ${t.nama} [${c?c.nama:'-'}] (poin +${t.poin})</option>`;
+                  }).join('')}
+                </select>
+              </div>
+              <div>
+                <label class="text-sm font-medium text-slate-700">Catatan (Opsional)</label>
+                <input name="catatan" placeholder="Detail prestasi" class="clay-input mt-1">
+              </div>
+              <div>
+                <label class="text-sm font-medium text-slate-700">Lampiran Bukti (Opsional, maks 1MB)</label>
+                <input name="evidence" type="file" accept="image/*,application/pdf" class="w-full text-sm mt-1 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:font-semibold file:bg-slate-100 file:text-slate-700 hover:file:bg-slate-200">
+              </div>
+              <button type="submit" class="w-full clay-btn clay-btn-primary">Tambah ke Draft</button>
+            </form>
+          </div>
+        </div>
+        <div class="lg:col-span-2">
+          <div class="panel">
+            <div class="flex justify-between items-center mb-3">
+              <h4 class="font-semibold text-lg">Draft (<span id="draftCount">0</span>)</h4>
+              <button id="btnSubmitAll" class="clay-btn clay-sm" disabled>Simpan Semua</button>
+            </div>
+            <div id="draftList" class="space-y-2 max-h-[60vh] overflow-y-auto">
+              <div class="text-center text-slate-500 py-8">Belum ada draft</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+    container.innerHTML = body;
+    renderDraftList();
+
+    // --- Autocomplete Logic (re-use) ---
+    const searchInput = document.getElementById('siswaSearchInput');
+    const resultsContainer = document.getElementById('siswaSearchResults');
+    const hiddenNisInput = document.getElementById('selectedNis');
+    const allSiswa = siswa;
+
+    const lastNis = localStorage.getItem(LAST_INPUT_NIS_KEY);
+    if (lastNis) {
+        const lastSiswa = allSiswa.find(s => s.nis === lastNis);
+        if (lastSiswa) {
+            searchInput.value = `${lastSiswa.nama} (${lastSiswa.nis})`;
+            hiddenNisInput.value = lastSiswa.nis;
+        }
+    }
+
+    searchInput.addEventListener('input', () => {
+        const query = searchInput.value.toLowerCase().trim();
+        hiddenNisInput.value = '';
+        if (query.length < 2) { resultsContainer.classList.add('hidden'); return; }
+        const filteredSiswa = allSiswa.filter(s => s.nama.toLowerCase().includes(query) || s.nis.toLowerCase().includes(query));
+        if (filteredSiswa.length > 0) {
+            resultsContainer.innerHTML = filteredSiswa.map(s => `<div class="p-2 hover:bg-blue-50 cursor-pointer" data-nis="${s.nis}" data-nama="${s.nama}"><p class="font-medium">${s.nama}</p><p class="text-xs text-slate-500">${s.nis} - ${s.kelas}</p></div>`).join('');
+        } else {
+            resultsContainer.innerHTML = '<div class="p-2 text-sm text-slate-500">Tidak ada siswa ditemukan.</div>';
+        }
+        resultsContainer.classList.remove('hidden');
+    });
+    resultsContainer.addEventListener('click', (e) => {
+        const target = e.target.closest('[data-nis]');
+        if (target) {
+            searchInput.value = `${target.dataset.nama} (${target.dataset.nis})`;
+            hiddenNisInput.value = target.dataset.nis;
+            resultsContainer.classList.add('hidden');
+        }
+    });
+    document.addEventListener('click', (e) => { if (!searchInput.contains(e.target) && !resultsContainer.contains(e.target)) resultsContainer.classList.add('hidden'); });
+
+    // Form submission
+    document.getElementById('formApresDraft').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const form = e.target;
+      const button = form.querySelector('button[type="submit"]');
+      showLoading(button);
+
+      const f = new FormData(form);
+      const obj = Object.fromEntries(f.entries());
+      
+      let evidenceURL = null;
+      const fileInput = form.querySelector('input[name="evidence"]');
+      if (fileInput.files[0]) {
+        if (fileInput.files[0].size > 1024 * 1024) {
+          hideLoading(button);
+          return showToast('Ukuran file bukti maksimal 1MB.', 'error');
+        }
+        evidenceURL = await uploadFile(fileInput.files[0], 'apresiasi');
+      }
+
+      const drafts = db.drafts(ses);
+      drafts.push({
+        nis: obj.nis, typeId: obj.typeId, catatan: obj.catatan,
+        evidence: evidenceURL,
+        isApresiasi: true // Flag for appreciation
+      });
+      db.saveDrafts(ses, drafts);
+      localStorage.setItem(LAST_INPUT_NIS_KEY, obj.nis);
+      renderDraftList();
+      form.reset();
+      document.getElementById('siswaSearchInput').focus();
+      hiddenNisInput.value = '';
+      hideLoading(button);
+      showToast('Ditambahkan ke draft!', 'info');
+    });
+
+    // Submit all drafts (same logic as pelanggaran)
+    document.getElementById('btnSubmitAll').addEventListener('click', async (e) => {
+      const button = e.target;
+      showLoading(button);
+      const drafts = db.drafts(ses);
+      if (drafts.length === 0) { hideLoading(button); return; }
+      
+      const [allTypes, allApresTypes, allSiswa, meta] = await Promise.all([
+          db.types(), db.apresTypes(), db.siswa(), db.getMeta()
+      ]);
+
+      const batch = firestore.batch();
+      let violCount = 0;
+      let apresCount = 0;
+
+      for (const draft of drafts) {
+        if (draft.isApresiasi) {
+          const t = allApresTypes.find(x=>x.id===draft.typeId);
+          const record = {
+            nis: draft.nis, typeId: draft.typeId, poin: t ? Number(t.poin) : 0,
+            catatan: draft.catatan||'', by: ses?.username || 'system', at: firebase.firestore.FieldValue.serverTimestamp(),
+            status: APPROVAL.PENDING, approvers: [], evidence: draft.evidence
+          };
+          const docRef = firestore.collection(DB_KEYS.APRES).doc();
+          batch.set(docRef, record);
+          apresCount++;
+        } else {
+          const t = allTypes.find(x=>x.id===draft.typeId);
+          const s = allSiswa.find(x=>x.nis===draft.nis);
+          const weight = parseFloat((meta.weights||{})[s?.kelas] || 1);
+          const base = t? Number(t.poin):0;
+          const eff = Math.round(base * (Number.isFinite(weight)? weight : 1));
+          let status = VIOLATION_APPROVAL.PENDING_L1;
+          if(ses.role.startsWith('admin')) status = VIOLATION_APPROVAL.APPROVED;
+          const record = {
+            nis: draft.nis, typeId: draft.typeId, basePoin: base, effPoin: eff,
+            catatan: draft.catatan||'', by: ses?.username || 'system', at: firebase.firestore.FieldValue.serverTimestamp(),
+            status, approvers: [], evidence: draft.evidence, appeal: null
+          };
+          const docRef = firestore.collection(DB_KEYS.VIOLATIONS).doc();
+          batch.set(docRef, record);
+          violCount++;
+        }
+      }
+      
+      await batch.commit();
+      logAction('BULK_SUBMIT_DRAFTS', { violCount, apresCount });
+      db.saveDrafts(ses, []);
+      renderDraftList();
+      hideLoading(button);
+      Swal.fire('Berhasil!', `${violCount} pelanggaran dan ${apresCount} apresiasi berhasil disimpan.`, 'success');
+      route('riwayat');
+    });
+  }
+
+  // ===========================
+  // App Initialization
+  // ===========================
+  window.addEventListener('DOMContentLoaded', async ()=>{
+    try {
+        await seedOnce();
+        const ses = getSession();
+        if(ses){ 
+          initRoleUI(); 
+          showApp(); 
+          route('dashboard'); 
+        } else { 
+          showLogin(); 
+        }
+        // Restore sidebar state
+        const collapsed = localStorage.getItem('sidebar_collapsed') === '1';
+        if (collapsed) {
+          document.getElementById('appShell').classList.add('collapsed');
+        }
+    } catch (error) {
+        console.error("Firebase initialization error:", error);
+        document.body.innerHTML = `<div class="p-4 text-red-700 bg-red-100">Gagal terhubung ke Firebase. Pastikan konfigurasi Anda benar dan Anda memiliki koneksi internet.</div>`;
+    }
+  });
+  </script>
+</body>
+</html>
+  </script>
+</body>
+</html>
