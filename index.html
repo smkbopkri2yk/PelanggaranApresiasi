@@ -2,10 +2,11 @@
 <html lang="id">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale-1.0" />
   
   <!-- ================================================== -->
-  <!-- !! PERBAIKAN UTAMA ADA DI SINI (CSP) !! -->
+  <!-- !! PERBAIKAN CSP ADA DI SINI !! -->
+  <!-- Menambahkan https://www.gstatic.com ke connect-src untuk menghilangkan error .map -->
   <meta http-equiv="Content-Security-Policy" content="
     default-src 'self'; 
     script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com https://cdn.jsdelivr.net https://unpkg.com https://www.gstatic.com;
@@ -329,16 +330,15 @@
   // ===========================
   // FIREBASE SETUP
   // ===========================
-  // TODO: GANTI DENGAN KONFIGURASI FIREBASE ANDA
-  // !! PERBAIKAN SINTAKS ADA DI SINI (MENAMBAHKAN KOMA) !!
+  // !! PERBAIKAN SINTAKS ADA DI SINI !!
+  // Menghapus baris 'measurementId' yang menyebabkan error sintaks
   const firebaseConfig = {
     apiKey: "AIzaSyBr9UTja1VDl_oPLmWA8zy4ROYlKcrULbk",
     authDomain: "pelanggaran-dan-apesiasi.firebaseapp.com",
     projectId: "pelanggaran-dan-apesiasi",
     storageBucket: "pelanggaran-dan-apesiasi.firebasestorage.app",
     messagingSenderId: "922679769143",
-    appId: "1:922679769143:web:18520b85512c8175d267b2", // <--- KOMA YANG HILANG DITAMBAHKAN DI SINI
-    measurementId: "G-5Q23RE03TY"
+    appId: "1:922679769143:web:18520b85512c8175d267b2"
   };
 
   // Initialize Firebase
