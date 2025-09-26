@@ -3,9 +3,23 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>App Poin Siswa - V3 (Firebase)</title>
   
-  <!-- Frameworks & Libraries --Akun default admin: admin / password123
+  <!-- ================================================== -->
+  <!-- !! PERBAIKAN UTAMA ADA DI SINI !! -->
+  <!-- Meta Tag Content Security Policy (CSP) untuk mengizinkan CDN di GitHub Pages -->
+  <meta http-equiv="Content-Security-Policy" content="
+    default-src 'self'; 
+    script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com https://cdn.jsdelivr.net https://unpkg.com;
+    style-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com https://cdn.jsdelivr.net https://fonts.googleapis.com https://unpkg.com;
+    font-src 'self' https://fonts.gstatic.com https://unpkg.com;
+    img-src 'self' data:;
+    connect-src 'self' https://*.firebaseio.com wss://*.firebaseio.com;
+  ">
+  <!-- ================================================== -->
+
+  <title>App Poin Siswa - V3</title>
+  
+  <!-- Frameworks & Libraries -->
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
@@ -244,8 +258,7 @@
           </button>
         </div>
         <p class="text-xs text-slate-500 text-center pt-2">
-            Siswa masuk menggunakan NIS sebagai username & password<br>
-           </span>
+            Siswa masuk menggunakan NIS sebagai username & password
         </p>
       </form>
     </div>
@@ -3343,6 +3356,7 @@
   async function renderProfilSaya(){
     const ses = getSession();
     if (ses.role !== 'siswa') {
+        // This case is unlikely to be hit due to menu restrictions, but good for safety.
         viewArea.innerHTML = card('Akses Ditolak', '<p>Halaman ini hanya untuk siswa.</p>');
         return;
     }
@@ -3932,7 +3946,6 @@
   });
   </script>
 </body>
-</html>
-  </script>
+</html>script>
 </body>
 </html>
