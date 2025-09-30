@@ -2,11 +2,8 @@
 <html lang="id">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale-1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   
-  <!-- ================================================== -->
-  <!-- !! PERBAIKAN CSP ADA DI SINI !! -->
-  <!-- Menambahkan https://www.gstatic.com ke connect-src untuk menghilangkan error .map -->
   <meta http-equiv="Content-Security-Policy" content="
     default-src 'self'; 
     script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com https://cdn.jsdelivr.net https://unpkg.com https://www.gstatic.com;
@@ -15,7 +12,6 @@
     img-src 'self' data: https://firebasestorage.googleapis.com;
     connect-src 'self' https://*.firebaseio.com wss://*.firebaseio.com https://firebasestorage.googleapis.com https://firestore.googleapis.com https://cdn.jsdelivr.net https://www.gstatic.com;
   ">
-  <!-- ================================================== -->
 
   <title>App Poin Siswa - V3 (Firebase)</title>
   
@@ -217,14 +213,49 @@
       body { background: #fff; }
     }
     
-    /* Mobile Layout */
+    /* <!-- PERBAIKAN TAMPILAN MOBILE --> */
+    #logoutBtnMobile { display: none; } /* Sembunyikan tombol logout mobile di desktop */
+
     @media (max-width: 900px) {
       .app.show { grid-template-columns: 1fr; }
-      .sidebar { position: sticky; top: 0; z-index: 10; width: 100% !important; height: auto; }
-      .app:not(.collapsed) .nav { flex-direction: row; overflow-x: auto; }
-      .app:not(.collapsed) .nav button { flex-shrink: 0; }
-      .app:not(.collapsed) .logout { display: none; }
-      .content { height: auto; }
+      .sidebar {
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        width: 100% !important;
+        height: auto;
+        flex-direction: row; /* Mengubah layout menjadi baris */
+        align-items: center; /* Menengahkan item secara vertikal */
+        justify-content: space-between; /* Memberi jarak antara brand dan nav */
+        padding: 8px 16px; /* Menyesuaikan padding untuk baris horizontal */
+        box-shadow: var(--clay-shadow);
+      }
+      .sidebar .brand {
+        margin-bottom: 0; /* Hapus margin bawah dari brand */
+      }
+      .app:not(.collapsed) .nav {
+        flex-direction: row;
+        overflow-x: auto; /* Tetap bisa scroll horizontal */
+        flex-grow: 1; /* Biarkan nav mengisi ruang kosong */
+        gap: 0; /* Hapus gap vertikal */
+      }
+      /* Sembunyikan scrollbar di nav untuk tampilan lebih bersih */
+      .app:not(.collapsed) .nav::-webkit-scrollbar {
+        display: none;
+      }
+      .app:not(.collapsed) .nav button {
+        flex-shrink: 0; /* Mencegah tombol menyusut */
+        padding: 8px 12px;
+      }
+      .app:not(.collapsed) .logout {
+        display: none; /* Sembunyikan tombol logout sidebar asli */
+      }
+      .content {
+        height: auto;
+      }
+      #logoutBtnMobile {
+        display: inline-flex; /* Tampilkan tombol logout mobile */
+      }
     }
   </style>
 </head>
@@ -258,7 +289,8 @@
           </button>
         </div>
         <p class="text-xs text-slate-500 text-center pt-2">
-            Siswa masuk menggunakan NIS sebagai username & password
+            Siswa masuk menggunakan NIS sebagai username & password.<br>
+            Akun default admin: <span class="font-semibold">admin / password123</span>
         </p>
       </form>
     </div>
@@ -297,6 +329,10 @@
             <button id="btnPrint" class="icon-btn clay-btn clay-sm" title="Cetak Halaman">
               <i class="bx bx-printer text-xl"></i>
             </button>
+            <!-- PERBAIKAN TAMPILAN MOBILE: Tombol logout baru untuk mobile -->
+            <button id="logoutBtnMobile" class="icon-btn clay-btn clay-sm" title="Logout">
+              <i class='bx bx-log-out-circle text-xl'></i>
+            </button>
         </div>
       </div>
       
@@ -329,8 +365,6 @@
   // ===========================
   // FIREBASE SETUP
   // ===========================
-  // !! PERBAIKAN SINTAKS ADA DI SINI !!
-  // Menghapus baris 'measurementId' yang menyebabkan error sintaks
   const firebaseConfig = {
     apiKey: "AIzaSyBr9UTja1VDl_oPLmWA8zy4ROYlKcrULbk",
     authDomain: "pelanggaran-dan-apesiasi.firebaseapp.com",
@@ -549,11 +583,17 @@
       loginAlert.classList.remove('hidden');
     }
   });
-  document.getElementById('logoutBtn').addEventListener('click', ()=>{
+
+  const handleLogout = () => {
     logAction('LOGOUT');
     setSession(null);
     showLogin();
-  });
+  };
+
+  document.getElementById('logoutBtn').addEventListener('click', handleLogout);
+  // <!-- PERBAIKAN TAMPILAN MOBILE: Event listener untuk tombol logout baru -->
+  document.getElementById('logoutBtnMobile').addEventListener('click', handleLogout);
+
   document.getElementById('repairAdmin').addEventListener('click', async ()=>{
     const usersQuery = await firestore.collection(DB_KEYS.USERS).where('username', '==', 'admin').get();
     if (usersQuery.empty) {
@@ -2151,11 +2191,18 @@
   }
   async function getTypeFormHTML(type = {}) {
     const cats = (await db.categories()).filter(c => c.tipe !== 'apresiasi');
+    const kodeOptions = cats.map(c =>
+        `<option value="${c.kode}" ${type.kode === c.kode ? 'selected' : ''}>${c.kode} - ${c.nama}</option>`
+    ).join('');
+
     return `
       <form class="space-y-4">
         <div>
           <label class="block text-sm font-medium mb-1 text-slate-700">Kode Pelanggaran</label>
-          <input required name="kode" value="${type.kode || ''}" placeholder="mis. TRL" class="clay-input">
+          <select required name="kode" class="clay-input">
+            <option value="">-- Pilih Kode --</option>
+            ${kodeOptions}
+          </select>
         </div>
         <div>
           <label class="block text-sm font-medium mb-1 text-slate-700">Nama Pelanggaran</label>
@@ -3646,11 +3693,18 @@
 
   async function getApresTypeFormHTML(type = {}) {
     const cats = (await db.categories()).filter(c => c.tipe === 'apresiasi');
+    const kodeOptions = cats.map(c =>
+        `<option value="${c.kode}" ${type.kode === c.kode ? 'selected' : ''}>${c.kode} - ${c.nama}</option>`
+    ).join('');
+
     return `
       <form class="space-y-4">
         <div>
           <label class="block text-sm font-medium mb-1 text-slate-700">Kode Apresiasi</label>
-          <input required name="kode" value="${type.kode || ''}" placeholder="mis. PRS" class="clay-input">
+          <select required name="kode" class="clay-input">
+            <option value="">-- Pilih Kode --</option>
+            ${kodeOptions}
+          </select>
         </div>
         <div>
           <label class="block text-sm font-medium mb-1 text-slate-700">Nama Apresiasi</label>
@@ -3948,4 +4002,3 @@
   </script>
 </body>
 </html>
-
