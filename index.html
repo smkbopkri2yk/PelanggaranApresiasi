@@ -290,7 +290,7 @@
         </div>
         <p class="text-xs text-slate-500 text-center pt-2">
             Siswa masuk menggunakan NIS sebagai username & password.<br>
-            Created By: Antonius Elga Kurnia, S.Pd</span>
+           Created By: Antonius Elga Kurnia, S.Pd</span>
         </p>
       </form>
     </div>
@@ -781,13 +781,14 @@
       
       const notifications = snapshot.docs.map(doc => ({id: doc.id, ...doc.data()}));
 
+      // PERBAIKAN: Menggunakan data-attributes untuk event handling yang lebih andal
       const bodyHTML = notifications.length > 0 ? `
           <div class="space-y-3">
               ${notifications.map(n => `
-                  <div class="p-3 rounded-lg cursor-pointer hover:bg-slate-200/50 ${!n.read ? 'bg-blue-100/50' : 'bg-slate-100/50'}" 
-                       onclick="handleNotificationClick('${n.id}', ${n.linkRoute ? `'${n.linkRoute}'` : null})">
-                      <p class="text-sm text-slate-800">${n.message}</p>
-                      <p class="text-xs text-slate-500 mt-1">${fmtDate(n.at)}</p>
+                  <div class="notification-item p-3 rounded-lg cursor-pointer hover:bg-slate-200/50 ${!n.read ? 'bg-blue-100/50' : 'bg-slate-100/50'}" 
+                       data-id="${n.id}" data-route="${n.linkRoute || ''}">
+                      <p class="text-sm text-slate-800 pointer-events-none">${n.message}</p>
+                      <p class="text-xs text-slate-500 mt-1 pointer-events-none">${fmtDate(n.at)}</p>
                   </div>
               `).join('')}
           </div>
@@ -795,24 +796,33 @@
 
       showModal('Notifikasi', bodyHTML);
 
-      // Mark all as read
-      const batch = firestore.batch();
-      notifications.forEach(n => {
-          if (!n.read) {
-              const docRef = firestore.collection(DB_KEYS.NOTIFICATIONS).doc(n.id);
-              batch.update(docRef, { read: true });
+      // PERBAIKAN: Menambahkan event listener setelah modal ditampilkan
+      modalBody.addEventListener('click', (e) => {
+          const item = e.target.closest('.notification-item');
+          if (item) {
+              const routeLink = item.dataset.route;
+              hideModal();
+              if (routeLink) {
+                  route(routeLink);
+              }
           }
       });
-      await batch.commit();
-      updateNotificationBadge();
-  }
 
-  window.handleNotificationClick = (notifId, linkRoute) => {
-      hideModal();
-      if (linkRoute) {
-          route(linkRoute);
+      // Mark all as read
+      const unreadNotifications = notifications.filter(n => !n.read);
+      if (unreadNotifications.length > 0) {
+          const batch = firestore.batch();
+          unreadNotifications.forEach(n => {
+              const docRef = firestore.collection(DB_KEYS.NOTIFICATIONS).doc(n.id);
+              batch.update(docRef, { read: true });
+          });
+          await batch.commit();
+          updateNotificationBadge();
       }
   }
+  
+  // PERBAIKAN: Fungsi global tidak lagi diperlukan karena menggunakan event delegation
+  // window.handleNotificationClick = (notifId, linkRoute) => { ... }
 
   function card(title, bodyHTML, actionsHTML=''){
     return `<div class="panel">
@@ -2597,18 +2607,19 @@
           }
       }
       
+      // PERBAIKAN: Ubah file menjadi Base64, jangan langsung upload
+      let evidenceData = null;
       const fileInput = form.querySelector('input[name="evidence"]');
-      let evidenceURL = null;
       if (fileInput.files[0]) {
         if (fileInput.files[0].size > 1024 * 1024) {
           hideLoading(button);
           return showToast('Ukuran file bukti maksimal 1MB.', 'error');
         }
         try {
-          evidenceURL = await uploadFile(fileInput.files[0], 'evidence');
+          evidenceData = await toBase64(fileInput.files[0]);
         } catch (error) {
           hideLoading(button);
-          return showToast('Gagal mengunggah file.', 'error');
+          return showToast('Gagal memproses file.', 'error');
         }
       }
 
@@ -2617,7 +2628,7 @@
         nis: obj.nis,
         typeId: obj.typeId,
         catatan: obj.catatan,
-        evidence: evidenceURL,
+        evidenceData: evidenceData, // Simpan data base64
         isApresiasi: false
       });
       db.saveDrafts(ses, drafts);
@@ -2643,17 +2654,31 @@
           db.types(), db.apresTypes(), db.siswa(), db.getMeta()
       ]);
 
+      // PERBAIKAN: Proses upload file dari base64 sebelum menyimpan ke firestore
+      const uploadPromises = drafts.map(async (draft) => {
+          if (draft.evidenceData) {
+              const blob = dataURLtoBlob(draft.evidenceData);
+              const folder = draft.isApresiasi ? 'apresiasi' : 'evidence';
+              return await uploadFile(blob, folder, `${draft.nis}-${Date.now()}`);
+          }
+          return null;
+      });
+
+      const evidenceUrls = await Promise.all(uploadPromises);
+
       const batch = firestore.batch();
       let violCount = 0;
       let apresCount = 0;
 
-      for (const draft of drafts) {
+      for (const [index, draft] of drafts.entries()) {
+        const evidenceURL = evidenceUrls[index]; // Ambil URL yang sesuai
+
         if (draft.isApresiasi) {
           const t = allApresTypes.find(x=>x.id===draft.typeId);
           const record = {
             nis: draft.nis, typeId: draft.typeId, poin: t ? Number(t.poin) : 0,
             catatan: draft.catatan||'', by: ses?.username || 'system', at: firebase.firestore.FieldValue.serverTimestamp(),
-            status: APPROVAL.PENDING, approvers: [], evidence: draft.evidence
+            status: APPROVAL.PENDING, approvers: [], evidence: evidenceURL
           };
           const docRef = firestore.collection(DB_KEYS.APRES).doc();
           batch.set(docRef, record);
@@ -2670,15 +2695,15 @@
           const record = {
             nis: draft.nis, typeId: draft.typeId, basePoin: base, effPoin: eff,
             catatan: draft.catatan||'', by: ses?.username || 'system', at: firebase.firestore.FieldValue.serverTimestamp(),
-            status, approvers: [], evidence: draft.evidence, appeal: null
+            status, approvers: [], evidence: evidenceURL, appeal: null
           };
           const docRef = firestore.collection(DB_KEYS.VIOLATIONS).doc();
           batch.set(docRef, record);
           
-          const siswa = allSiswa.find(sw => sw.nis === record.nis);
-          const kelas = (await db.kelas()).find(k => k.nama === siswa.kelas);
-          if (kelas && kelas.waliId) {
-            await createNotification(kelas.waliId, `Pelanggaran baru untuk siswa ${siswa.nama} menunggu persetujuan Anda.`, 'riwayat');
+          const siswaData = allSiswa.find(sw => sw.nis === record.nis);
+          const kelasData = (await db.kelas()).find(k => k.nama === siswaData.kelas);
+          if (kelasData && kelasData.waliId) {
+            await createNotification(kelasData.waliId, `Pelanggaran baru untuk siswa ${siswaData.nama} menunggu persetujuan Anda.`, 'riwayat');
           }
           violCount++;
         }
@@ -2769,7 +2794,7 @@
             <div>
               <p class="font-semibold text-slate-800">${s ? s.nama : d.nis}</p>
               <p class="text-xs text-slate-600">${t ? t.nama : 'Error'}</p>
-              ${d.evidence ? `<p class="text-xs text-blue-500 font-medium mt-1">${iconHTML('upload')} Ada bukti</p>` : ''}
+              ${d.evidenceData ? `<p class="text-xs text-blue-500 font-medium mt-1">${iconHTML('upload')} Ada bukti</p>` : ''}
             </div>
             <button onclick="removeDraft(${index})" class="text-red-500 hover:text-red-700 font-bold text-xl">&times;</button>
           </div>
@@ -2819,20 +2844,31 @@
     });
   }
   
-  // NEW: Firebase Storage Upload Function
-  async function uploadFile(file, folder = 'evidence') {
-      const fileName = `${folder}/${Date.now()}-${file.name}`;
+  // PERBAIKAN: Fungsi upload sekarang menerima Blob/File dan nama file kustom
+  async function uploadFile(file, folder = 'evidence', customFileName = null) {
+      const fileName = `${folder}/${customFileName || Date.now() + '-' + (file.name || 'file')}`;
       const storageRef = storage.ref(fileName);
       await storageRef.put(file);
       return await storageRef.getDownloadURL();
   }
 
+  // PERBAIKAN: Helper untuk mengubah file menjadi Base64
   const toBase64 = file => new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.readAsDataURL(file);
     reader.onload = () => resolve(reader.result);
     reader.onerror = error => reject(error);
   });
+
+  // PERBAIKAN: Helper untuk mengubah Base64 kembali menjadi Blob untuk diupload
+  function dataURLtoBlob(dataurl) {
+      var arr = dataurl.split(','), mime = arr[0].match(/:(.*?);/)[1],
+          bstr = atob(arr[1]), n = bstr.length, u8arr = new Uint8Array(n);
+      while(n--){
+          u8arr[n] = bstr.charCodeAt(n);
+      }
+      return new Blob([u8arr], {type:mime});
+  }
   
   // --- RIWAYAT & APPROVAL ---
   async function renderRiwayat(){
@@ -4002,20 +4038,21 @@
       const f = new FormData(form);
       const obj = Object.fromEntries(f.entries());
       
-      let evidenceURL = null;
+      // PERBAIKAN: Ubah file menjadi Base64, jangan langsung upload
+      let evidenceData = null;
       const fileInput = form.querySelector('input[name="evidence"]');
       if (fileInput.files[0]) {
         if (fileInput.files[0].size > 1024 * 1024) {
           hideLoading(button);
           return showToast('Ukuran file bukti maksimal 1MB.', 'error');
         }
-        evidenceURL = await uploadFile(fileInput.files[0], 'apresiasi');
+        evidenceData = await toBase64(fileInput.files[0]);
       }
 
       const drafts = db.drafts(ses);
       drafts.push({
         nis: obj.nis, typeId: obj.typeId, catatan: obj.catatan,
-        evidence: evidenceURL,
+        evidenceData: evidenceData, // Simpan data base64
         isApresiasi: true // Flag for appreciation
       });
       db.saveDrafts(ses, drafts);
@@ -4039,17 +4076,31 @@
           db.types(), db.apresTypes(), db.siswa(), db.getMeta()
       ]);
 
+      // PERBAIKAN: Proses upload file dari base64 sebelum menyimpan ke firestore
+      const uploadPromises = drafts.map(async (draft) => {
+          if (draft.evidenceData) {
+              const blob = dataURLtoBlob(draft.evidenceData);
+              const folder = draft.isApresiasi ? 'apresiasi' : 'evidence';
+              return await uploadFile(blob, folder, `${draft.nis}-${Date.now()}`);
+          }
+          return null;
+      });
+
+      const evidenceUrls = await Promise.all(uploadPromises);
+
       const batch = firestore.batch();
       let violCount = 0;
       let apresCount = 0;
 
-      for (const draft of drafts) {
+      for (const [index, draft] of drafts.entries()) {
+        const evidenceURL = evidenceUrls[index];
+
         if (draft.isApresiasi) {
           const t = allApresTypes.find(x=>x.id===draft.typeId);
           const record = {
             nis: draft.nis, typeId: draft.typeId, poin: t ? Number(t.poin) : 0,
             catatan: draft.catatan||'', by: ses?.username || 'system', at: firebase.firestore.FieldValue.serverTimestamp(),
-            status: APPROVAL.PENDING, approvers: [], evidence: draft.evidence
+            status: APPROVAL.PENDING, approvers: [], evidence: evidenceURL
           };
           const docRef = firestore.collection(DB_KEYS.APRES).doc();
           batch.set(docRef, record);
@@ -4065,7 +4116,7 @@
           const record = {
             nis: draft.nis, typeId: draft.typeId, basePoin: base, effPoin: eff,
             catatan: draft.catatan||'', by: ses?.username || 'system', at: firebase.firestore.FieldValue.serverTimestamp(),
-            status, approvers: [], evidence: draft.evidence, appeal: null
+            status, approvers: [], evidence: evidenceURL, appeal: null
           };
           const docRef = firestore.collection(DB_KEYS.VIOLATIONS).doc();
           batch.set(docRef, record);
@@ -4110,4 +4161,3 @@
   </script>
 </body>
 </html>
-
